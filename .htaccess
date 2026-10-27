@@ -1,0 +1,7 @@
+# Protect SQLite database files and sensitive directories
+<FilesMatch "\.(sqlite|sqlite-wal|sqlite-shm|db|json)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+Options -Indexes

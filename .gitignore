@@ -1,0 +1,21 @@
+# Database & Data
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+gradebook-data/
+data/*.sqlite
+
+# Logs & Temporary files
+*.log
+scratch/
+tmp/
+.tools/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE & Editor configs
+.vscode/
+.idea/
