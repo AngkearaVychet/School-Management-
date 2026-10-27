@@ -1,0 +1,604 @@
+﻿<!DOCTYPE html>
+<html lang="km">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>សាលាឌីជីថល - ឃ្លាំងផ្ទុកមេរៀន និងលំហាត់សម្រាប់គ្រូ និងសិស្ស</title>
+  
+  <!-- Google Fonts: Kantumruy Pro & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            khmer: ['"Kantumruy Pro"', 'sans-serif'],
+            sans: ['"Plus Jakarta Sans"', '"Kantumruy Pro"', 'sans-serif']
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- KaTeX CSS & JS for Math Formula Rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-khmer antialiased selection:bg-blue-500 selection:text-white">
+
+  <!-- ================= TOP NAVIGATION BAR ================= -->
+  <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16 sm:h-20 gap-4">
+        
+        <!-- Brand Logo & Title -->
+        <div class="flex items-center gap-3 cursor-pointer" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+          <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center shadow-md shadow-blue-500/25 flex-shrink-0">
+            <i class="fa-solid fa-graduation-cap text-xl sm:text-2xl"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-lg sm:text-xl font-black text-slate-900 tracking-tight">សាលាឌីជីថល</span>
+              <span class="hidden md:inline-flex px-2 py-0.5 rounded text-[11px] font-bold bg-blue-100 text-blue-700">EduHub</span>
+            </div>
+            <p class="text-xs text-slate-500 hidden sm:block">ឃ្លាំងផ្ទុកមេរៀន និងលំហាត់សម្រាប់គ្រូ និងសិស្ស</p>
+          </div>
+        </div>
+
+        <!-- Center Search (Desktop) -->
+        <div class="hidden lg:flex items-center flex-1 max-w-md mx-6">
+          <div class="relative w-full">
+            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+            <input 
+              type="text" 
+              id="searchInput"
+              placeholder="ស្វែងរកតាមចំណងជើង មុខវិជ្ជា ឈ្មោះគ្រូ..." 
+              class="w-full pl-10 pr-4 py-2 text-sm bg-slate-100 hover:bg-slate-100/80 focus:bg-white rounded-xl border border-transparent focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition"
+            />
+          </div>
+        </div>
+
+        <!-- Right Action Controls -->
+        <div class="flex items-center gap-2 sm:gap-3">
+          <!-- Role Switcher Badge -->
+          <div id="roleBadge">
+            <!-- Dynamically populated by updateRoleUI() -->
+          </div>
+
+          <!-- Add Content Button (Visible in Teacher Mode) -->
+          <button 
+            id="teacherAddBtn" 
+            onclick="openAddModal()" 
+            class="hidden px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-600/25 transition flex items-center gap-1.5 whitespace-nowrap"
+          >
+            <i class="fa-solid fa-circle-plus"></i>
+            <span>បន្ថែមមេរៀន/លំហាត់</span>
+          </button>
+
+          <!-- Backup & Settings Button -->
+          <button 
+            onclick="openBackupModal()" 
+            title="ទាញយក ឬបញ្ចូលទិន្នន័យ (Backup / Restore)" 
+            class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition"
+          >
+            <i class="fa-solid fa-sliders text-sm"></i>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= HERO BANNER SECTION ================= -->
+  <section class="relative bg-gradient-to-b from-blue-50/70 via-white to-slate-50 border-b border-slate-200/60 pt-8 pb-10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-8">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100/80 text-blue-700 text-xs font-semibold mb-3">
+          <i class="fa-solid fa-sparkles text-blue-500"></i>
+          <span>ប្រព័ន្ធសិក្សាបើកទូលាយសម្រាប់សិស្ស-និស្សិតកម្ពុជា</span>
+        </div>
+        <h1 class="text-2xl sm:text-4xl md:text-5xl font-black text-slate-900 leading-tight mb-4 tracking-tight">
+          ឃ្លាំងផ្ទុកមេរៀន វីដេអូ និងលំហាត់អនុវត្ត
+        </h1>
+        <p class="text-sm sm:text-base text-slate-600 leading-relaxed max-w-2xl mx-auto">
+          ប្រមូលផ្តុំមេរៀនទ្រឹស្តី រូបមន្តគន្លឹះ វីដេអូពន្យល់ និងកម្រងលំហាត់ប្រឡងបាក់ឌុប ចាប់ពីថ្នាក់ទី ៧ ដល់ ទី ១២ ដើម្បីជួយគ្រូបង្រៀនចែករំលែក និងសិស្សានុសិស្សសិក្សាដោយខ្លួនឯង។
+        </p>
+
+        <!-- Big Search Bar in Hero (Mobile & Desktop) -->
+        <div class="mt-6 max-w-2xl mx-auto">
+          <div class="relative flex items-center shadow-lg shadow-blue-500/5 rounded-2xl bg-white border border-slate-200 p-1.5 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition">
+            <i class="fa-solid fa-magnifying-glass text-slate-400 ml-3 mr-2"></i>
+            <input 
+              type="text" 
+              id="heroSearchInput" 
+              placeholder="ស្វែងរក៖ លីមីត, ដេរីវេ, ប៉ោលទោល, អេស្ទែ, រឿងទុំទាវ..." 
+              class="w-full py-2.5 px-2 text-sm text-slate-800 bg-transparent focus:outline-none placeholder:text-slate-400"
+            />
+            <button 
+              type="button" 
+              onclick="renderCards()" 
+              class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold shadow-md shadow-blue-600/20 transition flex items-center gap-1.5 flex-shrink-0"
+            >
+              <span>ស្វែងរក</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Counters Statistics -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 max-w-4xl mx-auto">
+        <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-lg flex-shrink-0">
+            <i class="fa-solid fa-book-open"></i>
+          </div>
+          <div>
+            <div class="text-xl sm:text-2xl font-black text-slate-900" id="statTotalLessons">0</div>
+            <div class="text-xs text-slate-500 font-medium">មេរៀនទ្រឹស្តី</div>
+          </div>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg flex-shrink-0">
+            <i class="fa-solid fa-pen-nib"></i>
+          </div>
+          <div>
+            <div class="text-xl sm:text-2xl font-black text-slate-900" id="statTotalExercises">0</div>
+            <div class="text-xs text-slate-500 font-medium">កម្រងលំហាត់</div>
+          </div>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-lg flex-shrink-0">
+            <i class="fa-solid fa-circle-play"></i>
+          </div>
+          <div>
+            <div class="text-xl sm:text-2xl font-black text-slate-900" id="statTotalVideos">0</div>
+            <div class="text-xs text-slate-500 font-medium">វីដេអូបង្រៀន</div>
+          </div>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-lg flex-shrink-0">
+            <i class="fa-solid fa-award"></i>
+          </div>
+          <div>
+            <div class="text-xl sm:text-2xl font-black text-slate-900" id="statCompleted">0</div>
+            <div class="text-xs text-slate-500 font-medium">អនុវត្តរួចរាល់</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= MAIN CONTENT SECTION ================= -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- Category Tabs & Grade Selector -->
+    <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-6">
+      
+      <!-- Content Type Tabs -->
+      <div class="flex items-center gap-1.5 p-1 rounded-2xl bg-slate-200/70 overflow-x-auto no-scrollbar">
+        <button 
+          data-tab="all" 
+          onclick="setTab('all')"
+          class="tab-btn flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm bg-blue-600 text-white shadow-md shadow-blue-500/20 transition whitespace-nowrap"
+        >
+          <i class="fa-solid fa-layer-group"></i>
+          <span>ទាំងអស់</span>
+        </button>
+        <button 
+          data-tab="lesson" 
+          onclick="setTab('lesson')"
+          class="tab-btn flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-xs sm:text-sm text-slate-600 hover:bg-slate-100 transition whitespace-nowrap"
+        >
+          <i class="fa-solid fa-book-open"></i>
+          <span>មេរៀន</span>
+        </button>
+        <button 
+          data-tab="exercise" 
+          onclick="setTab('exercise')"
+          class="tab-btn flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-xs sm:text-sm text-slate-600 hover:bg-slate-100 transition whitespace-nowrap"
+        >
+          <i class="fa-solid fa-pencil"></i>
+          <span>លំហាត់ & តេស្ត</span>
+        </button>
+        <button 
+          data-tab="video" 
+          onclick="setTab('video')"
+          class="tab-btn flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-xs sm:text-sm text-slate-600 hover:bg-slate-100 transition whitespace-nowrap"
+        >
+          <i class="fa-solid fa-video"></i>
+          <span>វីដេអូ</span>
+        </button>
+        <button 
+          data-tab="bookmarks" 
+          onclick="setTab('bookmarks')"
+          class="tab-btn flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-xs sm:text-sm text-slate-600 hover:bg-slate-100 transition whitespace-nowrap"
+        >
+          <i class="fa-solid fa-bookmark text-amber-500"></i>
+          <span>បានរក្សាទុក</span>
+        </button>
+      </div>
+
+      <!-- Grade & Sort Selectors -->
+      <div class="flex items-center gap-2.5">
+        <select 
+          id="gradeSelect" 
+          class="px-3 py-2 text-xs sm:text-sm rounded-xl bg-white border border-slate-200 text-slate-700 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-xs"
+        >
+          <!-- Populated by JS -->
+        </select>
+
+        <select 
+          id="sortSelect" 
+          class="px-3 py-2 text-xs sm:text-sm rounded-xl bg-white border border-slate-200 text-slate-700 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-xs"
+        >
+          <option value="newest">ថ្មីបំផុត</option>
+          <option value="views">មើលច្រើនជាងគេ</option>
+          <option value="bookmarks">ពេញនិយមបំផុត</option>
+        </select>
+      </div>
+
+    </div>
+
+    <!-- Subject Filter Pills (Horizontal Scroll) -->
+    <div class="mb-8 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+      <div id="subjectFilters" class="flex items-center gap-2 min-w-max">
+        <!-- Populated dynamically by renderSubjectFilters() -->
+      </div>
+    </div>
+
+    <!-- Content Cards Grid -->
+    <div id="cardsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Populated dynamically by renderCards() -->
+    </div>
+
+    <!-- Empty State Illustration -->
+    <div id="emptyState" class="hidden text-center py-16 px-4">
+      <div class="w-20 h-20 mx-auto rounded-3xl bg-blue-50 text-blue-500 flex items-center justify-center text-3xl mb-4">
+        <i class="fa-solid fa-folder-open"></i>
+      </div>
+      <h3 class="text-lg font-bold text-slate-800 mb-1">រកមិនឃើញមេរៀន ឬលំហាត់ឡើយ</h3>
+      <p class="text-sm text-slate-500 max-w-sm mx-auto mb-5">
+        មិនមានមេរៀនត្រូវគ្នានឹងការស្វែងរករបស់អ្នកទេ។ សូមសាកល្បងផ្លាស់ប្តូរពាក្យគន្លឹះ ឬជ្រើសរើសមុខវិជ្ជាផ្សេង។
+      </p>
+      <button 
+        onclick="state.searchQuery=''; state.selectedSubject='all'; state.selectedGrade='all'; document.getElementById('searchInput').value=''; document.getElementById('heroSearchInput').value=''; renderSubjectFilters(); renderGradeFilter(); renderCards();"
+        class="px-4 py-2 rounded-xl bg-slate-800 text-white text-xs font-semibold hover:bg-slate-900 transition"
+      >
+        សម្អាតការស្វែងរក
+      </button>
+    </div>
+
+  </main>
+
+  <!-- ================= DETAIL MODAL (Read Lesson & Video) ================= -->
+  <div id="detailModal" class="app-modal fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 hidden">
+    <div class="modal-backdrop fixed inset-0" onclick="closeAllModals()"></div>
+    <div class="modal-container relative bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden z-10 border border-slate-200">
+      <div id="detailModalContent">
+        <!-- Rendered by openDetailModal() -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= QUIZ MODAL (Interactive Testing) ================= -->
+  <div id="quizModal" class="app-modal fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 hidden">
+    <div class="modal-backdrop fixed inset-0" onclick="closeAllModals()"></div>
+    <div class="modal-container relative bg-white w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden z-10 border border-slate-200">
+      <div id="quizModalContent">
+        <!-- Rendered by openQuizModal() -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TEACHER ADD / EDIT MODAL ================= -->
+  <div id="editModal" class="app-modal fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 hidden">
+    <div class="modal-backdrop fixed inset-0" onclick="closeAllModals()"></div>
+    <div class="modal-container relative bg-white w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden z-10 border border-slate-200 max-h-[90vh] flex flex-col">
+      
+      <!-- Modal Header -->
+      <div class="p-6 border-b border-slate-200 bg-white sticky top-0 z-10 flex items-center justify-between">
+        <div>
+          <span class="text-xs font-bold text-amber-600 uppercase tracking-wider">ផ្ទាំងគ្រប់គ្រងគ្រូបង្រៀន</span>
+          <h3 class="text-xl font-bold text-slate-900" id="editModalTitle">បង្កើតមេរៀន ឬលំហាត់ថ្មី</h3>
+        </div>
+        <button onclick="closeAllModals()" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Form Body -->
+      <form id="itemForm" class="p-6 md:p-8 space-y-5 overflow-y-auto flex-1">
+        
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">ប្រភេទមាតិកា *</label>
+            <select name="itemType" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white" required>
+              <option value="lesson">មេរៀនទ្រឹស្តី (Lesson)</option>
+              <option value="exercise">កម្រងលំហាត់ (Exercise)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">មុខវិជ្ជា *</label>
+            <select name="itemSubject" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white" required>
+              <option value="math">គណិតវិទ្យា</option>
+              <option value="physics">រូបវិទ្យា</option>
+              <option value="chemistry">គីមីវិទ្យា</option>
+              <option value="biology">ជីវវិទ្យា</option>
+              <option value="khmer">ភាសាខ្មែរ</option>
+              <option value="english">ភាសាអង់គ្លេស</option>
+              <option value="it">ព័ត៌មានវិទ្យា/IT</option>
+              <option value="history">ប្រវត្តិវិទ្យា</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">កម្រិតថ្នាក់ *</label>
+            <select name="itemGrade" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white" required>
+              <option value="ថ្នាក់ទី ៧">ថ្នាក់ទី ៧</option>
+              <option value="ថ្នាក់ទី ៨">ថ្នាក់ទី ៨</option>
+              <option value="ថ្នាក់ទី ៩">ថ្នាក់ទី ៩</option>
+              <option value="ថ្នាក់ទី ១០">ថ្នាក់ទី ១០</option>
+              <option value="ថ្នាក់ទី ១១">ថ្នាក់ទី ១១</option>
+              <option value="ថ្នាក់ទី ១២" selected>ថ្នាក់ទី ១២</option>
+              <option value="ថ្នាក់ទូទៅ">ថ្នាក់ទូទៅ</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">ចំណងជើងមេរៀន ឬលំហាត់ *</label>
+          <input 
+            type="text" 
+            name="itemTitle" 
+            placeholder="ឧទាហរណ៍៖ មេរៀនទី១៖ លីមីតនៃអនុគមន៍ និងការគណនារាងមិនកំណត់" 
+            class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:outline-none" 
+            required 
+          />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">ឈ្មោះគ្រូបង្រៀន / អ្នកនិពន្ធ *</label>
+            <input 
+              type="text" 
+              name="itemTeacher" 
+              placeholder="ឧទាហរណ៍៖ លោកគ្រូ ចាន់ សុផល" 
+              class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:outline-none" 
+              required 
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">សាលារៀន ឬស្ថាប័ន</label>
+            <input 
+              type="text" 
+              name="itemSchool" 
+              placeholder="ឧទាហរណ៍៖ វិទ្យាល័យព្រះស៊ីសុវត្ថិ" 
+              class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:outline-none" 
+            />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">សេចក្តីសង្ខេបខ្លី (Summary)</label>
+          <textarea 
+            name="itemSummary" 
+            rows="2" 
+            placeholder="សង្ខេបខ្លឹមសារសំខាន់ៗនៃមេរៀនដោយសង្ខេប..." 
+            class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          ></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">តំណភ្ជាប់វីដេអូ YouTube ឬ MP4 (បើមាន)</label>
+          <div class="relative">
+            <i class="fa-solid fa-link absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input 
+              type="url" 
+              name="itemVideoUrl" 
+              placeholder="https://www.youtube.com/watch?v=..." 
+              class="w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:outline-none" 
+            />
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-xs font-bold text-slate-700">ខ្លឹមសារលម្អិតនៃមេរៀន / លំហាត់ (គាំទ្ររូបមន្ត KaTeX Math $...$ និង $$...$$)</label>
+            <span class="text-[11px] text-blue-600 font-medium">គាំទ្រ Markdown & Math</span>
+          </div>
+          <textarea 
+            name="itemContent" 
+            rows="8" 
+            placeholder="សរសេរខ្លឹមសារមេរៀន ឬលំហាត់នៅទីនេះ...&#10;ប្រើ $x^2 + y^2 = r^2$ សម្រាប់រូបមន្តគណិតវិទ្យា&#10;ប្រើ ### សម្រាប់ក្បាលចំណងជើងរង" 
+            class="w-full p-3.5 text-sm font-mono rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50/50" 
+            required
+          ></textarea>
+        </div>
+
+        <!-- Dynamic Questions Builder for Exercises -->
+        <div id="questionsBuilderContainer" class="pt-4 border-t border-slate-200">
+          <!-- Populated by renderQuestionBuilder() -->
+        </div>
+
+        <!-- Bottom Submit Button -->
+        <div class="pt-4 border-t border-slate-200 flex items-center justify-end gap-3 sticky bottom-0 bg-white py-3">
+          <button 
+            type="button" 
+            onclick="closeAllModals()" 
+            class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-100 transition"
+          >
+            បោះបង់
+          </button>
+          <button 
+            type="submit" 
+            class="px-6 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-600/25 transition flex items-center gap-2"
+          >
+            <i class="fa-solid fa-floppy-disk"></i>
+            <span>រក្សាទុកទិន្នន័យ</span>
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= BACKUP & SETTINGS MODAL ================= -->
+  <div id="backupModal" class="app-modal fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 hidden">
+    <div class="modal-backdrop fixed inset-0" onclick="closeAllModals()"></div>
+    <div class="modal-container relative bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden z-10 border border-slate-200">
+      <div class="p-6 border-b border-slate-200 flex items-center justify-between">
+        <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-database text-blue-600"></i>
+          ការគ្រប់គ្រងទិន្នន័យ (Data & Backup)
+        </h3>
+        <button onclick="closeAllModals()" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-4 text-sm">
+        <p class="text-slate-600 text-xs leading-relaxed">
+          លោកអ្នកអាចទាញយកទិន្នន័យមេរៀនទាំងអស់រក្សាទុកលើកុំព្យូទ័រ (Export) ឬបញ្ចូលទិន្នន័យពីឯកសារ JSON មកវិញ (Import)។
+        </p>
+
+        <div class="space-y-3">
+          <!-- Export Button -->
+          <button 
+            onclick="handleExportData()" 
+            class="w-full p-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs sm:text-sm flex items-center justify-between transition border border-blue-200"
+          >
+            <div class="flex items-center gap-2.5">
+              <i class="fa-solid fa-download text-base"></i>
+              <span>ទាញយកទិន្នន័យទាំងអស់ (Export JSON)</span>
+            </div>
+            <i class="fa-solid fa-chevron-right text-xs opacity-70"></i>
+          </button>
+
+          <!-- Import Button -->
+          <label class="w-full p-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs sm:text-sm flex items-center justify-between transition border border-slate-200 cursor-pointer">
+            <div class="flex items-center gap-2.5">
+              <i class="fa-solid fa-upload text-base text-slate-500"></i>
+              <span>បញ្ចូលទិន្នន័យពីឯកសារ (Import JSON)</span>
+            </div>
+            <input type="file" accept=".json" onchange="handleImportFile(event)" class="hidden" />
+            <i class="fa-solid fa-chevron-right text-xs opacity-70"></i>
+          </label>
+
+          <!-- Reset Default Data -->
+          <button 
+            onclick="handleResetDefaults()" 
+            class="w-full p-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs sm:text-sm flex items-center justify-between transition border border-rose-200"
+          >
+            <div class="flex items-center gap-2.5">
+              <i class="fa-solid fa-rotate-left text-base text-rose-500"></i>
+              <span>កំណត់ឡើងវិញទៅទិន្នន័យគំរូដើម (Reset)</span>
+            </div>
+            <i class="fa-solid fa-chevron-right text-xs opacity-70"></i>
+          </button>
+        </div>
+
+        <div class="pt-4 border-t border-slate-200 text-center">
+          <p class="text-[11px] text-slate-400">
+            លេខកូដសម្ងាត់គ្រូបង្រៀនលំនាំដើម៖ <strong class="text-slate-600">1234</strong>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= FLOATING TOAST NOTIFICATION ================= -->
+  <div 
+    id="toast" 
+    class="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-2xl bg-slate-900 text-white shadow-xl opacity-0 pointer-events-none translate-y-4 transition-all duration-300 max-w-sm"
+  >
+    <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+    <span id="toastMessage" class="text-xs sm:text-sm font-medium">ប្រតិបត្តិការជោគជ័យ</span>
+  </div>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="bg-white border-t border-slate-200 py-10 mt-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+        
+        <div class="md:col-span-2">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold">
+              <i class="fa-solid fa-graduation-cap"></i>
+            </div>
+            <span class="text-xl font-black text-slate-900">សាលាឌីជីថល</span>
+          </div>
+          <p class="text-sm text-slate-500 max-w-md leading-relaxed mb-4">
+            ឃ្លាំងផ្ទុកមេរៀន និងលំហាត់សម្រាប់គ្រូ និងសិស្សានុសិស្សទូទាំងប្រទេសកម្ពុជា។ ងាយស្រួលប្រើប្រាស់ គាំទ្ររូបមន្តវិទ្យាសាស្ត្រ វីដេអូបង្រៀន និងលំហាត់អន្តរកម្ម។
+          </p>
+          <div class="flex items-center gap-3 text-slate-400">
+            <span class="text-xs">កម្រិតថ្នាក់៖ ថ្នាក់ទី ៧ - ១២ និងថ្នាក់ទូទៅ</span>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-slate-900 text-sm mb-3">មុខវិជ្ជាពេញនិយម</h4>
+          <ul class="space-y-2 text-xs text-slate-600">
+            <li><a href="#" onclick="event.preventDefault(); setSubjectFilter('math');" class="hover:text-blue-600">គណិតវិទ្យា (លីមីត ដេរីវេ សមីការ)</a></li>
+            <li><a href="#" onclick="event.preventDefault(); setSubjectFilter('physics');" class="hover:text-blue-600">រូបវិទ្យា (ចលនាយោល ប៉ោលទោល)</a></li>
+            <li><a href="#" onclick="event.preventDefault(); setSubjectFilter('chemistry');" class="hover:text-blue-600">គីមីវិទ្យា (គីមីសរីរាង្គ អេស្ទែ)</a></li>
+            <li><a href="#" onclick="event.preventDefault(); setSubjectFilter('biology');" class="hover:text-blue-600">ជីវវិទ្យា (DNA & ពន្ធុវិទ្យា)</a></li>
+            <li><a href="#" onclick="event.preventDefault(); setSubjectFilter('khmer');" class="hover:text-blue-600">ភាសាខ្មែរ (តែងសេចក្តី ទុំទាវ)</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-slate-900 text-sm mb-3">មុខងារសំខាន់ៗ</h4>
+          <ul class="space-y-2 text-xs text-slate-600">
+            <li><a href="#" onclick="event.preventDefault(); setTab('lesson');" class="hover:text-blue-600"><i class="fa-solid fa-book-open mr-1"></i> អានមេរៀនទ្រឹស្តី</a></li>
+            <li><a href="#" onclick="event.preventDefault(); setTab('exercise');" class="hover:text-blue-600"><i class="fa-solid fa-pencil mr-1"></i> ធ្វើលំហាត់ និងកម្រងសំណួរ</a></li>
+            <li><a href="#" onclick="event.preventDefault(); setTab('video');" class="hover:text-blue-600"><i class="fa-solid fa-circle-play mr-1"></i> ទស្សនាវីដេអូពន្យល់</a></li>
+            <li><a href="#" onclick="event.preventDefault(); switchRole();" class="hover:text-blue-600"><i class="fa-solid fa-chalkboard-user mr-1"></i> ផ្ទាំងគ្រប់គ្រងគ្រូបង្រៀន (Teacher Mode)</a></li>
+          </ul>
+        </div>
+
+      </div>
+
+      <div class="pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-3">
+        <p>© 2026 សាលាឌីជីថល (EduHub Cambodia) - រក្សាសិទ្ធិគ្រប់យ៉ាង</p>
+        <p class="flex items-center gap-1">
+          <span>បង្កើតឡើងសម្រាប់វិស័យអប់រំនៅកម្ពុជា</span>
+          <i class="fa-solid fa-heart text-rose-500"></i>
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Application Scripts -->
+  <script src="data/sample-data.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

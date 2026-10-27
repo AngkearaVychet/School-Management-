@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ការគ្រប់គ្រងការរក្សាទុកទិន្នន័យ និងគណនីអ្នកប្រើប្រាស់ (Storage & User Auth Manager)
  * Handles LocalStorage persistence, Users, Roles (Admin, Teacher, Student, Parent), and Permissions.
  */

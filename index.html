@@ -1,594 +1,1014 @@
-<!doctype html>
+﻿<!DOCTYPE html>
 <html lang="km">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>សាលាអន្តរជាតិ ហេមតុន - ប្រព័ន្ធគ្រប់គ្រងសាលា និងឃ្លាំងមេរៀន</title>
-<link rel="icon" type="image/png" href="images/logo.png">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>សាលាអន្តរជាតិ ហេមតុន - Hampton International School</title>
+  <link rel="icon" type="image/png" href="images/logo.png">
+  
+  <!-- Google Fonts: Kantumruy Pro & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome 6 Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            khmer: ['"Kantumruy Pro"', 'sans-serif'],
+            sans: ['"Plus Jakarta Sans"', '"Kantumruy Pro"', 'sans-serif']
+          },
+          colors: {
+            hampton: {
+              blue: '#0d2b6b',
+              navy: '#081a42',
+              red: '#c8102e',
+              lightRed: '#fee2e2',
+              gold: '#f59e0b',
+              softBlue: '#f0f5ff'
+            }
+          }
+        }
+      }
+    }
+  </script>
 
-<!-- Google Fonts: Kantumruy Pro & Moul -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Moul&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+  <!-- KaTeX CSS & JS for Math Formula Rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
 
-<!-- Font Awesome 6 Icons -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
-<!-- CDN Libraries for Export & Math -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
-<!-- KaTeX for Math Equations -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
-
-<style>
-/* Layout & Themes for Hampton International School */
-:root {
-  --bg: #f4f6fa; --surface: #ffffff; --sunk: #edf1f7; --line: #d8e0ec; --line-strong: #b8c4d6;
-  --ink: #101c33; --muted: #56647a; --navy: #0d2b6b; --navy-ink: #ffffff; --navy-soft: #e3ebf8;
-  --marigold: #c98a12; --marigold-soft: #fcf4e4; --red: #c8102e; --red-soft: #fee2e2;
-  --gA: #1d7a4c; --gA-bg: #e1f3ea; --gB: #16707d; --gB-bg: #def1f3; --gC: #2c5aa0; --gC-bg: #e3ebf8;
-  --gD: #9a6400; --gD-bg: #fbefd6; --gE: #b3352b; --gE-bg: #fbe4e1; --gF: #5b6678; --gF-bg: #eceff3;
-  --bad: #b3352b; --bad-bg: #fbe4e1;
-  --f-body: "Kantumruy Pro", "Noto Sans Khmer", "Plus Jakarta Sans", system-ui, sans-serif;
-  --f-display: "Moul", "Khmer OS Muol Light", serif;
-  --r: 10px;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0f1520; --surface: #161e2c; --sunk: #1d2638; --line: #2b374d; --line-strong: #3d4d68;
-    --ink: #e8ecf3; --muted: #9ba7bc; --navy: #15387d; --navy-ink: #ffffff; --navy-soft: #1d2c47;
-    --marigold: #e8b04a; --marigold-soft: #382c16;
-    --gA: #6fd3a0; --gA-bg: #173628; --gB: #6ccbd6; --gB-bg: #163339; --gC: #8fb3ef; --gC-bg: #1c2b45;
-    --gD: #eabd63; --gD-bg: #3a2e14; --gE: #f08a80; --gE-bg: #3d1f1c; --gF: #9aa5b8; --gF-bg: #232b37;
-    --bad: #f08a80; --bad-bg: #3d1f1c; color-scheme: dark;
-  }
-}
-
-* { box-sizing: border-box; }
-body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.6; margin: 0; }
-button, input, select, textarea { font: inherit; color: inherit; }
-.num { font-variant-numeric: tabular-nums; }
-
-/* Custom Scrollbar */
-::-webkit-scrollbar { width: 7px; height: 7px; }
-::-webkit-scrollbar-track { background: var(--sunk); }
-::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: var(--muted); }
-
-/* Shell Layout */
-.app { display: flex; min-height: 100vh; min-height: 100dvh; }
-.side {
-  width: 260px; flex: none; background: #081a42; color: #fff; position: sticky; top: 0; height: 100vh; height: 100dvh;
-  overflow-y: auto; display: flex; flex-direction: column; padding: 18px 12px calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 30;
-  border-right: 1px solid rgba(255,255,255,0.08);
-}
-.side-brand {
-  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; padding-bottom: 14px;
-  border-bottom: 1px solid rgba(255,255,255,0.14); margin-bottom: 10px; cursor: pointer;
-}
-.sb-logo {
-  width: 76px; height: 76px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center;
-  overflow: hidden; box-shadow: 0 0 0 3px rgba(255,255,255,0.2), 0 0 0 5px var(--red);
-}
-.sb-logo img { width: 100%; height: 100%; object-fit: contain; }
-.sb-kh { font-family: var(--f-display); font-size: 0.95rem; line-height: 1.8; margin-top: 8px; color: #fff; }
-.sb-en { font-size: 0.72rem; color: #fca5a5; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
-.sb-brname { font-size: 0.78rem; margin-top: 4px; color: var(--marigold); font-weight: 700; }
-.sb-branch { margin-top: 8px; width: 100%; }
-.sb-branch label { display: block; font-size: 0.7rem; color: #cbd5e1; letter-spacing: 0.05em; margin-bottom: 2px; }
-.sb-branch select { width: 100%; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.3); color: #fff; border-radius: 8px; padding: 5px 8px; font-size: 0.82rem; }
-.sb-branch select option { color: #18202d; background: #fff; }
-
-.sn-sec { margin-bottom: 12px; }
-.sn-grp { font-size: 0.72rem; letter-spacing: 0.06em; color: var(--marigold); margin: 10px 10px 4px; font-weight: 700; text-transform: uppercase; }
-.side .tab {
-  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 7px 11px; border-radius: 8px;
-  color: rgba(255,255,255,0.85); background: none; border: 0; cursor: pointer; font-weight: 500; font-size: 0.88rem; line-height: 1.5;
-  transition: all 0.15s ease;
-}
-.side .tab:hover { background: rgba(255,255,255,0.1); color: #fff; }
-.side .tab[aria-selected="true"] { background: #fff; color: #081a42; font-weight: 700; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
-.side .tab svg, .side .tab i { width: 18px; text-align: center; flex: none; font-size: 0.95rem; }
-.side-foot { margin-top: auto; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.14); }
-.who { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: #fff; }
-.who-badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 6px; background: rgba(255,255,255,0.15); font-weight: 600; font-size: 0.75rem; }
-.who button { background: none; border: 1px solid rgba(255,255,255,0.35); color: #fff; border-radius: 6px; padding: 3px 8px; cursor: pointer; font-size: 0.75rem; transition: background 0.15s; }
-.who button:hover { background: rgba(255,255,255,0.2); }
-
-.shell { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.topbar {
-  position: sticky; top: 0; z-index: 25; background: var(--surface); border-bottom: 1px solid var(--line);
-  display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap;
-  padding: 10px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-}
-.tb-title { flex: 1; min-width: 160px; }
-.tb-title h1 { font-size: 1.15rem; margin: 0; font-weight: 700; line-height: 1.4; color: var(--navy); }
-.tb-title p { margin: 0; color: var(--muted); font-size: 0.8rem; }
-.pickers { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.pick { display: flex; flex-direction: column; gap: 2px; }
-.pick label { font-size: 0.72rem; color: var(--muted); font-weight: 600; }
-.pick select { background: var(--surface); color: var(--ink); border: 1px solid var(--line-strong); border-radius: 6px; padding: 5px 8px; font-size: 0.82rem; min-width: 130px; }
-.menu-btn { display: none; background: none; border: 1px solid var(--line-strong); border-radius: 8px; padding: 6px; color: var(--ink); cursor: pointer; }
-.scrim { display: none; }
-
-@media (max-width: 900px) {
-  .side { position: fixed; left: 0; top: 0; bottom: 0; transform: translateX(-105%); box-shadow: 0 0 30px rgba(0,0,0,0.35); }
-  body.nav-open .side { transform: none; }
-  body.nav-open .scrim { display: block; position: fixed; inset: 0; background: rgba(10,20,40,0.5); z-index: 25; }
-  .menu-btn { display: inline-flex; }
-}
-
-main { max-width: 1400px; margin: 0 auto; width: 100%; padding: 20px 16px 48px; display: flex; flex-direction: column; gap: 20px; }
-.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; min-width: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
-.panel h2 { margin: 0 0 4px; font-size: 1.05rem; font-weight: 700; color: var(--navy); }
-.panel .sub { margin: 0 0 14px; color: var(--muted); font-size: 0.85rem; }
-.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-.spacer { flex: 1; }
-.btn { border: 1px solid var(--line-strong); background: var(--surface); padding: 6px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.88rem; white-space: nowrap; transition: all 0.15s; }
-.btn:hover { background: var(--sunk); }
-.btn.primary { background: var(--navy); border-color: var(--navy); color: #fff; }
-.btn.primary:hover { filter: brightness(1.15); }
-.btn.danger { color: var(--bad); }
-.btn.armed { background: var(--bad); border-color: var(--bad); color: #fff; }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn.sm { padding: 3px 9px; font-size: 0.8rem; }
-.field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.field label { font-size: 0.78rem; color: var(--muted); font-weight: 600; }
-.inp { border: 1px solid var(--line-strong); background: var(--surface); border-radius: 8px; padding: 6px 10px; font-size: 0.88rem; min-width: 0; }
-.status { font-size: 0.82rem; color: var(--muted); font-weight: 500; }
-.status.err { color: var(--bad); }
-.hint { font-size: 0.8rem; color: var(--muted); }
-.empty { text-align: center; padding: 40px 16px; color: var(--muted); }
-.empty h2 { color: var(--ink); }
-
-/* Quick Switch Role Bar */
-.quick-roles { display: flex; align-items: center; gap: 4px; font-size: 0.78rem; }
-.quick-roles button { border: 0; padding: 3px 8px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.75rem; color: #fff; transition: opacity 0.15s; }
-.quick-roles button:hover { opacity: 0.85; }
-
-/* Dashboard Hero */
-.hero { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; background: linear-gradient(135deg, #fff 0%, #f0f5ff 100%); border: 1px solid var(--line); border-radius: var(--r); padding: 22px clamp(16px,3vw,30px); position: relative; overflow: hidden; }
-.hero::after { content: ""; position: absolute; right: -50px; top: -50px; width: 200px; height: 200px; border-radius: 50%; border: 24px solid var(--navy-soft); pointer-events: none; }
-.hero .hlogo { width: 92px; height: 92px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: 0 0 0 4px var(--navy-soft), 0 0 0 6px var(--red); flex: none; position: relative; z-index: 1; }
-.hero .hlogo img { width: 100%; height: 100%; object-fit: contain; }
-.hero .htxt { position: relative; z-index: 1; min-width: 0; }
-.hero h2 { font-family: var(--f-display); font-weight: 400; font-size: 1.4rem; line-height: 1.8; margin: 0; color: var(--navy); }
-.hero .en { color: var(--red); font-weight: 700; letter-spacing: 0.05em; font-size: 0.9rem; text-transform: uppercase; }
-.hero .meta { color: var(--muted); font-size: 0.85rem; margin-top: 4px; }
-
-/* Stats Tiles */
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
-.stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
-.stat .k { font-size: 0.78rem; color: var(--muted); font-weight: 600; }
-.stat .v { font-size: 1.5rem; font-weight: 700; line-height: 1.3; color: var(--navy); }
-.stat .s { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
-
-.tgrp { margin-top: 22px; }
-.tgrp h3 { font-size: 0.92rem; margin: 0 0 10px; color: var(--muted); font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
-.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
-.tile { display: flex; gap: 12px; align-items: flex-start; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; cursor: pointer; color: inherit; transition: all 0.15s; }
-.tile:hover { border-color: var(--navy); background: var(--navy-soft); transform: translateY(-1px); }
-.tile .ic { width: 38px; height: 38px; border-radius: 10px; background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: center; flex: none; font-size: 1rem; }
-.tile.fin .ic { background: var(--gA-bg); color: var(--gA); }
-.tile.edu .ic { background: var(--red-soft); color: var(--red); }
-.tile b { display: block; font-size: 0.95rem; font-weight: 700; color: var(--navy); }
-.tile span { display: block; color: var(--muted); font-size: 0.8rem; line-height: 1.4; margin-top: 2px; }
-
-/* Grade Ledger Grid */
-.gridwrap { overflow: auto; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); max-height: 75vh; }
-table.grid { border-collapse: separate; border-spacing: 0; font-size: 0.88rem; min-width: 100%; }
-.grid th, .grid td { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 0; text-align: center; white-space: nowrap; }
-.grid thead th { background: var(--navy-soft); position: sticky; top: 0; z-index: 2; font-weight: 700; padding: 6px 6px; vertical-align: bottom; color: var(--navy); }
-.grid th.subj { writing-mode: vertical-rl; transform: rotate(180deg); height: 140px; font-size: 0.82rem; font-weight: 600; padding: 6px 4px; text-align: left; }
-.grid .c-no { width: 38px; color: var(--muted); }
-.grid .c-name { position: sticky; left: 0; z-index: 1; background: var(--surface); text-align: left; padding: 4px 10px; min-width: 170px; max-width: 240px; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
-.grid thead .c-name { z-index: 3; background: var(--navy-soft); }
-.grid td.cell input { width: 44px; border: 0; background: transparent; text-align: center; padding: 6px 2px; font-variant-numeric: tabular-nums; font-weight: 600; }
-.grid td.cell input:focus { background: var(--marigold-soft); outline: 2px solid var(--marigold); outline-offset: -2px; }
-.grid td.cell input.bad { background: var(--bad-bg); color: var(--bad); }
-.grid td.cell input.low { color: var(--gE); }
-.grid td.calc { padding: 4px 8px; font-variant-numeric: tabular-nums; background: var(--sunk); font-weight: 600; }
-.grid td.avg { font-weight: 700; color: var(--navy); }
-.grid tbody tr:hover td { background-color: rgba(13, 43, 107, 0.05); }
-.grid tbody tr:hover td.c-name { background: var(--navy-soft); }
-.grid tfoot td { background: var(--sunk); font-weight: 700; padding: 5px 4px; font-variant-numeric: tabular-nums; position: sticky; bottom: 0; }
-.grid tfoot td.c-name { background: var(--sunk); z-index: 2; }
-
-.gpill { display: inline-flex; gap: 4px; align-items: center; border-radius: 999px; padding: 1px 8px; font-size: 0.78rem; font-weight: 700; }
-.gpill.A { background: var(--gA-bg); color: var(--gA); } .gpill.B { background: var(--gB-bg); color: var(--gB); } .gpill.C { background: var(--gC-bg); color: var(--gC); }
-.gpill.D { background: var(--gD-bg); color: var(--gD); } .gpill.E { background: var(--gE-bg); color: var(--gE); } .gpill.F { background: var(--gF-bg); color: var(--gF); }
-
-.rank { display: inline-block; min-width: 24px; color: var(--gE); font-weight: 700; }
-.rank.top { background: var(--red); color: #fff; border-radius: 999px; padding: 0 6px; }
-
-/* Student Avatars */
-.av { --s: 28px; width: var(--s); height: var(--s); border-radius: 50%; overflow: hidden; flex: none; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; background: var(--navy-soft); color: var(--navy); font-weight: 700; font-size: calc(var(--s) * 0.42); border: 1.5px solid var(--line-strong); }
-.av img { width: 100%; height: 100%; object-fit: cover; }
-.av.btn-av { cursor: pointer; }
-.av.btn-av:hover { outline: 2px solid var(--marigold); }
-.nmwrap { display: inline-flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; }
-.nmwrap > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-/* Document Previews */
-.pv-wrap { width: 100%; position: relative; overflow: hidden; border-radius: 4px; box-shadow: 0 4px 20px rgba(0,0,0,0.12); background: #fff; }
-.pv-wrap > .ss { position: absolute; left: 0; top: 0; transform-origin: top left; }
-
-/* Printable Score Sheets & Paper View (A4 794x1123) */
-.ss { width: 794px; height: 1123px; background: #fff; color: #101c33; font-family: var(--f-body); position: relative; overflow: hidden; }
-.ss-in { position: absolute; inset: 26px 24px 22px; }
-.ss-fit { transform-origin: top left; }
-.ss-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
-.ss-school { display: flex; flex-direction: column; align-items: center; text-align: center; min-width: 220px; }
-.ss-logo { width: 88px; height: 88px; object-fit: contain; margin-bottom: 2px; }
-.ss-school .hs-skh { font-size: 13.5px; line-height: 1.8; font-weight: 700; color: var(--navy); }
-.ss-school .hs-sen { font-size: 11.5px; color: var(--red); font-weight: 700; letter-spacing: 0.02em; }
-.ss-head .hs-kingdom { font-size: 14.5px; line-height: 2; text-align: center; font-family: var(--f-display); color: var(--navy); }
-.ss-rule { margin: 6px 0; border-top: 2px solid var(--navy); border-bottom: 1px solid var(--marigold); height: 3px; }
-.ss-title { font-family: var(--f-display); font-weight: 400; text-align: center; color: var(--navy); font-size: 20px; line-height: 1.8; margin: 4px 0 0; }
-.ss-sub { text-align: center; color: var(--red); font-size: 13.5px; font-weight: 700; margin-bottom: 8px; }
-table.ss-t { border-collapse: collapse; font-size: 11.5px; table-layout: fixed; }
-.ss-t th, .ss-t td { border: 1px solid #5b6678; text-align: center; padding: 0 2px; height: 21px; font-variant-numeric: tabular-nums; overflow: hidden; white-space: nowrap; }
-.ss-t thead th { background: #e3ebf8; color: var(--navy); font-weight: 700; }
-.ss-t th.rot { height: 114px; padding: 0; position: relative; }
-.ss-t th.rot span { position: absolute; left: 50%; bottom: 6px; width: 108px; transform-origin: 0 0; transform: rotate(-90deg) translateY(-50%); text-align: left; font-size: 10.5px; line-height: 1.2; white-space: normal; }
-.ss-t td.nm { text-align: left; padding-left: 6px; text-overflow: ellipsis; }
-.ss-t td.calc { background: #f1f4f9; font-weight: 700; }
-.ss-t td.rk { color: var(--red); font-weight: 700; }
-.ss-foot { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; margin-top: 10px; font-size: 11px; }
-.ss-sum { border-collapse: collapse; }
-.ss-sum td { border: 1px solid #b9c3d3; padding: 1px 7px; font-variant-numeric: tabular-nums; }
-.ss-sum td.n { text-align: right; }
-.ss-signs { display: flex; justify-content: space-between; margin-top: 14px; font-size: 12px; }
-.ss-sign { text-align: center; min-width: 220px; }
-.ss-sign .ttl { font-family: var(--f-display); color: var(--navy); line-height: 1.9; }
-.ss-sign .sp { height: 52px; }
-.ss-sign .nm { font-weight: 700; color: var(--navy); }
-
-/* Stamp & Signature Placement */
-.sigsp { position: relative; }
-.sigsp .sig { position: absolute; left: 54%; top: 50%; transform: translate(-50%, -50%); height: 135%; max-width: min(170px, 85%); object-fit: contain; z-index: 2; }
-.sigsp .stamp { position: absolute; left: 52%; top: 0; transform: translate(-100%, -36%); height: 225%; width: auto; object-fit: contain; z-index: 0; opacity: 0.88; }
-
-/* Notice Board Sheet */
-table.nb { border-collapse: collapse; width: 100%; font-size: 14px; }
-.nb th, .nb td { border: 1px solid #5b6678; padding: 3px 8px; height: 29px; text-align: center; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.nb thead th { background: #0d2b6b; color: #fff; font-weight: 700; }
-.nb td.nm { text-align: left; font-weight: 600; }
-.nb tr.toprow td { background: #fdf3d8; }
-.nb .medal { display: inline-flex; width: 24px; height: 24px; border-radius: 50%; align-items: center; justify-content: center; background: var(--red); color: #fff; font-weight: 700; font-size: 12.5px; border: 2px solid var(--marigold); }
-.nb-sum { display: flex; justify-content: center; gap: 20px; font-size: 12.5px; margin-top: 10px; color: var(--navy); font-weight: 700; }
-
-/* Attendance */
-.chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.chip { border-radius: 999px; padding: 2px 10px; font-size: 0.8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-.chip.P { background: var(--gA-bg); color: var(--gA); } .chip.L { background: var(--gD-bg); color: var(--gD); }
-.chip.E { background: var(--gC-bg); color: var(--gC); } .chip.A { background: var(--gE-bg); color: var(--gE); } .chip.N { background: var(--sunk); color: var(--muted); }
-.seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 8px; overflow: hidden; background: var(--surface); }
-.seg button { border: 0; border-right: 1px solid var(--line); background: none; padding: 5px 12px; cursor: pointer; font-size: 0.82rem; color: var(--muted); font-weight: 600; }
-.seg button:last-child { border-right: 0; }
-.seg button:hover { background: var(--sunk); }
-.seg button[aria-pressed="true"] { background: var(--navy); color: #fff; }
-
-/* Finance tables */
-table.ftab { border-collapse: separate; border-spacing: 0; font-size: 0.88rem; min-width: 100%; }
-.ftab th, .ftab td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: center; white-space: nowrap; }
-.ftab thead th { background: var(--navy-soft); position: sticky; top: 0; font-weight: 700; z-index: 1; color: var(--navy); }
-.ftab .l { text-align: left; } .ftab .r { text-align: right; }
-.ftab td.muted { color: var(--muted); max-width: 250px; overflow: hidden; text-overflow: ellipsis; }
-.ftab tfoot td { background: var(--sunk); font-weight: 700; position: sticky; bottom: 0; }
-.ftab td.acts { display: flex; gap: 4px; justify-content: flex-end; }
-.ftab tr.editing td { background: var(--marigold-soft); }
-.ftab td.neg { color: var(--bad); }
-.ftab td.pm.ok { background: var(--gA-bg); color: var(--gA); }
-.ftab td.pm.part { background: var(--gD-bg); color: var(--gD); }
-.ftab td.pm.none { background: var(--gE-bg); color: var(--gE); }
-.fgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px 12px; align-items: end; margin-top: 10px; }
-.fgrid .field.wide { grid-column: span 2; }
-@media (max-width: 520px) { .fgrid .field.wide { grid-column: span 1; } }
-.fgrid .fbtns { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.ysum tr.sec td { background: var(--sunk); font-weight: 700; color: var(--navy); }
-.ysum tr.tot td { font-weight: 700; border-bottom: 2px solid var(--line-strong); }
-.fchart { width: 100%; min-width: 560px; height: auto; display: block; }
-.fchart .grid { stroke: var(--line); stroke-width: 1; }
-.fchart .ax { fill: var(--muted); font-size: 11px; font-family: var(--f-body); }
-.fchart .bin { fill: var(--gA); } .fchart .bout { fill: var(--bad); }
-table.fr { border-collapse: collapse; width: 100%; font-size: 11.5px; margin-top: 8px; }
-.fr th, .fr td { border: 1px solid #b9c3d3; padding: 2px 7px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.fr thead th { background: var(--navy); color: #fff; font-weight: 700; }
-.fr .l { text-align: left; white-space: normal; }
-.fr tr.tot td { background: #eef2f9; font-weight: 700; }
-.fr td.neg { color: var(--bad); }
-.fr-two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.fr-warn { color: var(--bad); font-size: 11px; margin: 6px 0 0; }
-.fr-signs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; text-align: center; font-size: 12px; margin-top: 14px; }
-.fr-signs .sp { height: 46px; } .fr-signs .nm { font-weight: 700; color: var(--navy); }
-.hon-layout { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 16px; align-items: start; }
-@media (max-width: 900px) { .hon-layout { grid-template-columns: 1fr; } }
-.idc-layout { grid-template-columns: 320px minmax(0, 1fr); }
-.idc-prev canvas { width: 100%; height: auto; display: block; border-radius: 12px; box-shadow: 0 4px 22px rgba(0,0,0,0.18); background: #fff; }
-
-/* Learning Repository (Lessons & Quizzes) inside unified system */
-.card-hover { transition: all 0.2s ease; }
-.card-hover:hover { transform: translateY(-3px); box-shadow: 0 10px 20px -8px rgba(0,0,0,0.08); }
-.video-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 0.75rem; background-color: #0f172a; }
-.video-container iframe, .video-container video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
-
-.modal-backdrop { background-color: rgba(8, 26, 66, 0.7); backdrop-filter: blur(4px); }
-.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); background: #081a42; color: #fff; padding: 9px 18px; border-radius: 999px; font-size: 0.88rem; font-weight: 600; z-index: 999; box-shadow: 0 4px 14px rgba(0,0,0,0.25); }
-
-/* Responsive adjustments */
-@media (max-width: 760px) {
-  .hero { flex-direction: column; text-align: center; }
-  .hero .hlogo { margin: 0 auto; }
-}
-[hidden] { display: none !important; }
-</style>
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="selection:bg-red-600 selection:text-white">
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-khmer antialiased selection:bg-red-600 selection:text-white">
 
-<div class="app">
-
-  <!-- ================= LEFT SIDEBAR NAVIGATION ================= -->
-  <aside class="side" id="side" aria-label="ម៉ឺនុយសាលា ហេមតុន">
-    
-    <!-- School Brand & Logo -->
-    <div class="side-brand" onclick="goTab('home')">
-      <div class="sb-logo" id="sbLogo">
-        <img src="images/logo.png" alt="Logo សាលាអន្តរជាតិ ហេមតុន" />
+  <!-- ================= TOP NOTIFICATION & QUICK ROLE SWITCH BAR ================= -->
+  <div class="bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 text-white text-[11px] sm:text-xs py-1.5 px-4 border-b border-blue-800">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+      
+      <div class="flex items-center gap-2">
+        <span class="inline-block w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+        <span class="font-medium">ក្រសួងអប់រំ យុវជន និងកីឡា • ឃ្លាំងមេរៀន សាលាអន្តរជាតិ ហេមតុន</span>
       </div>
-      <div class="sb-kh" id="sbKh">សាលាអន្តរជាតិ ហេមតុន</div>
-      <div class="sb-en" id="sbEn">Hampton International School</div>
-      <div class="sb-brname" id="sbBrName" hidden></div>
-      <div class="sb-branch" id="sbBranch" hidden>
-        <label for="selBranch">សាខាសាលា</label>
-        <select id="selBranch"></select>
-      </div>
-    </div>
 
-    <!-- Navigation Groups -->
-    <nav class="side-nav" id="sideNav"></nav>
-
-    <!-- Side Footer / User Profile & Logout -->
-    <div class="side-foot">
-      <div class="who" id="who"></div>
-    </div>
-  </aside>
-
-  <!-- Dark Scrim for Mobile Sidebar -->
-  <div class="scrim" id="scrim"></div>
-
-  <!-- ================= RIGHT SHELL CONTENT ================= -->
-  <div class="shell">
-    
-    <!-- Top Bar with Pickers & Role Shortcuts -->
-    <header class="topbar">
-      <div class="row" style="gap: 10px;">
-        <button class="menu-btn" id="menuBtn" aria-label="បើកម៉ឺនុយ">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      <!-- Quick Role Switcher for Fast Testing -->
+      <div class="flex items-center gap-1 text-[11px]">
+        <span class="text-slate-300 mr-1 hidden md:inline">ប្តូរសាកល្បងសិទ្ធិ៖</span>
+        <button onclick="quickLogin('admin')" class="px-2 py-0.5 rounded-md bg-red-600/80 hover:bg-red-600 text-white font-bold transition flex items-center gap-1 shadow-xs" title="ចូលជា Admin (សិទ្ធិធ្វើអ្វីទាំងអស់)">
+          <i class="fa-solid fa-user-shield text-[10px]"></i>
+          <span>Admin</span>
         </button>
-        <div class="tb-title">
-          <h1 id="pageTitle">ផ្ទាំងដើម</h1>
-          <p id="pageSub">សាលាអន្តរជាតិ ហេមតុន</p>
+        <button onclick="quickLogin('teacher')" class="px-2 py-0.5 rounded-md bg-blue-700/80 hover:bg-blue-700 text-white font-bold transition flex items-center gap-1 shadow-xs" title="ចូលជា គ្រូបង្រៀន">
+          <i class="fa-solid fa-chalkboard-user text-[10px]"></i>
+          <span>គ្រូ</span>
+        </button>
+        <button onclick="quickLogin('student')" class="px-2 py-0.5 rounded-md bg-emerald-600/80 hover:bg-emerald-600 text-white font-bold transition flex items-center gap-1 shadow-xs" title="ចូលជា សិស្ស">
+          <i class="fa-solid fa-user-graduate text-[10px]"></i>
+          <span>សិស្ស</span>
+        </button>
+        <button onclick="quickLogin('parent')" class="px-2 py-0.5 rounded-md bg-amber-600/80 hover:bg-amber-600 text-white font-bold transition flex items-center gap-1 shadow-xs" title="ចូលជា មាតាបិតា">
+          <i class="fa-solid fa-users text-[10px]"></i>
+          <span>មាតាបិតា</span>
+        </button>
+
+        <span class="text-slate-400 mx-0.5">|</span>
+
+        <!-- Direct Register Shortcut -->
+        <button onclick="openRegisterModal()" class="px-2 py-0.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition flex items-center gap-1 shadow-xs" title="ចុះឈ្មោះ / បង្កើតគណនីថ្មី">
+          <i class="fa-solid fa-user-plus text-[10px]"></i>
+          <span>+ បង្កើតគណនី</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= MAIN NAVIGATION BAR ================= -->
+  <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-18 sm:h-20 gap-4">
+        
+        <!-- Logo & School Name -->
+        <div class="flex items-center gap-3 cursor-pointer py-2" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+          <img 
+            src="images/logo.png" 
+            alt="Logo សាលាអន្តរជាតិ ហេមតុន" 
+            class="w-12 h-12 sm:w-14 sm:h-14 object-contain filter drop-shadow hover:scale-105 transition flex-shrink-0"
+          />
+          <div>
+            <h1 class="text-base sm:text-lg md:text-xl font-black text-blue-950 leading-tight tracking-tight">
+              សាលាអន្តរជាតិ ហេមតុន
+            </h1>
+            <p class="text-[10px] sm:text-xs font-bold text-red-600 tracking-wider uppercase">
+              Hampton International School
+            </p>
+          </div>
+        </div>
+
+        <!-- Search Input (Desktop) -->
+        <div class="hidden lg:flex items-center flex-1 max-w-md mx-6">
+          <div class="relative w-full">
+            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+            <input 
+              type="text" 
+              id="searchInput"
+              placeholder="ស្វែងរកមេរៀន លំហាត់ ឬកម្រិតថ្នាក់..." 
+              class="w-full pl-10 pr-4 py-2 text-xs sm:text-sm bg-slate-100 hover:bg-slate-100/80 focus:bg-white rounded-xl border border-transparent focus:border-blue-900 focus:ring-2 focus:ring-blue-900/20 focus:outline-none transition"
+            />
+          </div>
+        </div>
+
+        <!-- Action Controls & Auth User Nav -->
+        <div class="flex items-center gap-2 sm:gap-2.5">
+          
+          <!-- Create Account Button (Always Visible) -->
+          <button 
+            onclick="openRegisterModal()" 
+            class="px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold shadow-xs transition flex items-center gap-1.5 whitespace-nowrap"
+            title="ចុះឈ្មោះ / បង្កើតគណនីថ្មី"
+          >
+            <i class="fa-solid fa-user-plus text-xs"></i>
+            <span>បង្កើតគណនី</span>
+          </button>
+
+          <!-- Parent Dashboard Shortcut (Visible to Parent/Admin) -->
+          <button 
+            id="parentDashBtn" 
+            onclick="openParentModal()" 
+            title="ផ្ទាំងតាមដានការរៀនរបស់កូន" 
+            class="hidden px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs sm:text-sm font-bold border border-amber-200 transition items-center gap-1.5"
+          >
+            <i class="fa-solid fa-chart-line text-amber-600"></i>
+            <span class="hidden md:inline">តាមដានកូន</span>
+          </button>
+
+          <!-- Admin User Management Button (Visible to Admin only) -->
+          <button 
+            id="adminManageBtn" 
+            onclick="openUserManagementModal()" 
+            title="គ្រប់គ្រងអ្នកប្រើប្រាស់ (Admin Users)" 
+            class="hidden px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 text-xs sm:text-sm font-bold border border-red-200 transition items-center gap-1.5"
+          >
+            <i class="fa-solid fa-users-gear text-red-600"></i>
+            <span class="hidden md:inline">គ្រប់គ្រង User</span>
+          </button>
+
+          <!-- Add Content Button (Visible to Teacher & Admin) -->
+          <button 
+            id="teacherAddBtn" 
+            onclick="openAddModal()" 
+            class="hidden px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-bold shadow-md shadow-red-600/25 transition flex items-center gap-1.5 whitespace-nowrap"
+          >
+            <i class="fa-solid fa-circle-plus"></i>
+            <span class="hidden sm:inline">បន្ថែមមេរៀន/លំហាត់</span>
+            <span class="sm:hidden">បន្ថែម</span>
+          </button>
+
+          <!-- Backup & Settings Button (Visible to Admin) -->
+          <button 
+            id="backupBtn"
+            onclick="openBackupModal()" 
+            title="ទាញយក ឬបញ្ចូលទិន្នន័យ (Backup / Restore)" 
+            class="hidden w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition"
+          >
+            <i class="fa-solid fa-database text-sm text-blue-900"></i>
+          </button>
+
+          <!-- User Navigation / Login Dropdown -->
+          <div id="userNavContainer"></div>
+
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= HERO BANNER SECTION ================= -->
+  <section class="relative bg-gradient-to-b from-blue-50/80 via-white to-slate-50 border-b border-slate-200/70 pt-8 pb-10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="flex flex-col md:flex-row items-center justify-between gap-8 mb-8">
+        
+        <!-- Left: Text & Badges -->
+        <div class="flex-1 text-center md:text-left">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-100/90 text-red-800 text-xs font-bold mb-3">
+            <i class="fa-solid fa-award text-red-600"></i>
+            <span>គុណភាព • វិន័យ • សីលធម៌ • ឧត្តមភាពនៃការអប់រំ</span>
+          </div>
+
+          <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-blue-950 leading-tight mb-3">
+            ឃ្លាំងផ្ទុកមេរៀន និងលំហាត់
+          </h1>
+          <p class="text-base sm:text-lg font-semibold text-slate-700 mb-2">
+            សាលាអន្តរជាតិ ហេមតុន (Hampton International School)
+          </p>
+          <p class="text-xs sm:text-sm text-slate-500 leading-relaxed max-w-2xl mb-6">
+            ប្រព័ន្ធរៀន និងបង្រៀនឌីជីថលសម្រាប់ <strong>សិស្ស, គ្រូ, មាតាបិតា, និង Admin</strong> គាំទ្រការរៀនភាសាខ្មែរ (មត្តេយ្យ-បឋមសិក្សា), ភាសាអង់គ្លេស (Pre-Nursery ដល់ GEP 3) និងថ្នាក់ក្រៅម៉ោងភាសាអង់គ្លេស-ចិន។
+          </p>
+
+          <!-- Search Bar -->
+          <div class="relative max-w-xl flex items-center shadow-md shadow-blue-900/5 rounded-2xl bg-white border border-slate-200 p-1.5 focus-within:border-blue-900 focus-within:ring-4 focus-within:ring-blue-900/10 transition">
+            <i class="fa-solid fa-magnifying-glass text-slate-400 ml-3 mr-2"></i>
+            <input 
+              type="text" 
+              id="heroSearchInput" 
+              placeholder="ស្វែងរក៖ ព្យញ្ជនៈខ្មែរ, បូកដកលេខ, Phonics, Primary, Pinyin ចិន..." 
+              class="w-full py-2.5 px-2 text-xs sm:text-sm text-slate-800 bg-transparent focus:outline-none placeholder:text-slate-400"
+            />
+            <button 
+              type="button" 
+              onclick="renderCards()" 
+              class="px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs sm:text-sm font-bold shadow-sm transition flex items-center gap-1.5 flex-shrink-0"
+            >
+              <span>ស្វែងរក</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: Official Emblem Card -->
+        <div class="w-full max-w-xs flex-shrink-0">
+          <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-xl shadow-blue-950/5 text-center relative overflow-hidden">
+            <div class="absolute -top-10 -right-10 w-32 h-32 bg-blue-50 rounded-full"></div>
+            <div class="relative z-10">
+              <img 
+                src="images/logo.png" 
+                alt="Emblem" 
+                class="w-32 h-32 mx-auto object-contain filter drop-shadow-md mb-3"
+              />
+              <span class="inline-block px-3 py-1 rounded-full bg-blue-50 text-blue-950 text-xs font-extrabold mb-1">
+                សាលាអន្តរជាតិ ហេមតុន
+              </span>
+              <p class="text-[11px] text-slate-500 font-medium">Hampton International School</p>
+              
+              <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-around text-xs text-slate-600">
+                <div>
+                  <span class="font-bold text-blue-900 block">ខ្មែរ</span>
+                  <span class="text-[10px] text-slate-400">មត្តេយ្យ-ទី៦</span>
+                </div>
+                <div class="h-6 w-px bg-slate-200"></div>
+                <div>
+                  <span class="font-bold text-red-600 block">English</span>
+                  <span class="text-[10px] text-slate-400">PN - GEP 3</span>
+                </div>
+                <div class="h-6 w-px bg-slate-200"></div>
+                <div>
+                  <span class="font-bold text-amber-600 block">中文</span>
+                  <span class="text-[10px] text-slate-400">ថ្នាក់ចិន</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Live Counters Statistics -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 max-w-4xl mx-auto">
+        <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-900 flex items-center justify-center text-lg flex-shrink-0">
+            <i class="fa-solid fa-book-open"></i>
+          </div>
+          <div>
+            <div class="text-xl sm:text-2xl font-black text-slate-900" id="statTotalLessons">0</div>
+            <div class="text-xs text-slate-500 font-medium">មេរៀនទ្រឹស្តី</div>
+          </div>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center text-lg flex-shrink-0">
+            <i class="fa-solid fa-pen-nib"></i>
+          </div>
+          <div>
+            <div class="text-xl sm:text-2xl font-black text-slate-900" id="statTotalExercises">0</div>
+            <div class="text-xs text-slate-500 font-medium">កម្រងលំហាត់</div>
+          </div>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-lg flex-shrink-0">
+            <i class="fa-solid fa-circle-play"></i>
+          </div>
+          <div>
+            <div class="text-xl sm:text-2xl font-black text-slate-900" id="statTotalVideos">0</div>
+            <div class="text-xs text-slate-500 font-medium">វីដេអូបង្រៀន</div>
+          </div>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg flex-shrink-0">
+            <i class="fa-solid fa-award"></i>
+          </div>
+          <div>
+            <div class="text-xl sm:text-2xl font-black text-slate-900" id="statCompleted">0</div>
+            <div class="text-xs text-slate-500 font-medium">អនុវត្តរួចរាល់</div>
+          </div>
         </div>
       </div>
 
-      <!-- Quick Role Switcher for instant testing -->
-      <div class="quick-roles">
-        <span class="hint" style="margin-right: 2px;">តេស្តសិទ្ធិ៖</span>
-        <button onclick="quickLogin('admin')" style="background: #c8102e;" title="Admin - សិទ្ធិធ្វើអ្វីទាំងអស់">Admin</button>
-        <button onclick="quickLogin('teacher')" style="background: #0d2b6b;" title="គ្រូ - បង្រៀន/ពិន្ទុ/លំហាត់">គ្រូ</button>
-        <button onclick="quickLogin('student')" style="background: #1d7a4c;" title="សិស្ស - រៀន/ធ្វើតេស្ត">សិស្ស</button>
-        <button onclick="quickLogin('parent')" style="background: #c98a12;" title="មាតាបិតា - តាមដានកូន">មាតាបិតា</button>
-        <button onclick="openRegisterModal()" style="background: #059669;" title="បង្កើតគណនីថ្មី">+ បង្កើតគណនី</button>
+    </div>
+  </section>
+
+  <!-- ================= MAIN CONTENT SECTION ================= -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- Program Track Tabs (Hampton Core Programs) -->
+    <div class="mb-5">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+          <i class="fa-solid fa-graduation-cap text-blue-900"></i>
+          កម្មវិធីសិក្សាសាលាអន្តរជាតិ ហេមតុន
+        </h3>
+      </div>
+      <div id="programTabsContainer" class="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar"></div>
+    </div>
+
+    <!-- Category Tabs & Grade Selector -->
+    <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-5">
+      
+      <!-- Content Type Tabs -->
+      <div class="flex items-center gap-1.5 p-1 rounded-2xl bg-slate-200/70 overflow-x-auto no-scrollbar">
+        <button 
+          data-tab="all" 
+          onclick="setTab('all')"
+          class="tab-btn flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs sm:text-sm bg-blue-900 text-white shadow-md transition whitespace-nowrap"
+        >
+          <i class="fa-solid fa-layer-group"></i>
+          <span>ទាំងអស់</span>
+        </button>
+        <button 
+          data-tab="lesson" 
+          onclick="setTab('lesson')"
+          class="tab-btn flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-xs sm:text-sm text-slate-600 hover:bg-slate-100 transition whitespace-nowrap"
+        >
+          <i class="fa-solid fa-book-open"></i>
+          <span>មេរៀន</span>
+        </button>
+        <button 
+          data-tab="exercise" 
+          onclick="setTab('exercise')"
+          class="tab-btn flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-xs sm:text-sm text-slate-600 hover:bg-slate-100 transition whitespace-nowrap"
+        >
+          <i class="fa-solid fa-pencil"></i>
+          <span>លំហាត់ & តេស្ត</span>
+        </button>
+        <button 
+          data-tab="video" 
+          onclick="setTab('video')"
+          class="tab-btn flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-xs sm:text-sm text-slate-600 hover:bg-slate-100 transition whitespace-nowrap"
+        >
+          <i class="fa-solid fa-video"></i>
+          <span>វីដេអូ</span>
+        </button>
+        <button 
+          data-tab="bookmarks" 
+          onclick="setTab('bookmarks')"
+          class="tab-btn flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-xs sm:text-sm text-slate-600 hover:bg-slate-100 transition whitespace-nowrap"
+        >
+          <i class="fa-solid fa-bookmark text-amber-500"></i>
+          <span>បានរក្សាទុក</span>
+        </button>
       </div>
 
-      <!-- Academic & Financial Pickers -->
-      <div class="pickers">
-        <div class="pick acad"><label for="selClass">ថ្នាក់រៀន</label><select id="selClass"></select></div>
-        <div class="pick acad"><label for="selPeriod">ខែ / ឆមាស</label><select id="selPeriod"></select></div>
-        <div class="pick finp" hidden><label for="selFy">ឆ្នាំសិក្សា</label><select id="selFy"></select></div>
-        <div class="pick finp" hidden><label for="selFm">ខែហិរញ្ញវត្ថុ</label><select id="selFm"></select></div>
-      </div>
-    </header>
-
-    <!-- Main Dynamic Workspace View -->
-    <main id="main">
-      <div class="empty"><h2>កំពុងផ្ទុកទិន្នន័យ…</h2><p>សូមរង់ចាំបន្តិច</p></div>
-    </main>
-
-  </div>
-
-</div>
-
-<!-- Hidden File Inputs -->
-<input type="file" id="fileImport" accept=".xlsx,.xls" hidden>
-<input type="file" id="filePhoto" accept="image/*" hidden>
-
-<!-- ================= MODALS ================= -->
-
-<!-- 1. Detail Modal for Lessons & Videos -->
-<div id="detailModal" class="app-modal fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 hidden">
-  <div class="modal-backdrop fixed inset-0" onclick="closeAllModals()"></div>
-  <div class="modal-container relative bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden z-10 border border-slate-200">
-    <div id="detailModalContent"></div>
-  </div>
-</div>
-
-<!-- 2. Interactive Quiz Solver Modal -->
-<div id="quizModal" class="app-modal fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 hidden">
-  <div class="modal-backdrop fixed inset-0" onclick="closeAllModals()"></div>
-  <div class="modal-container relative bg-white w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden z-10 border border-slate-200">
-    <div id="quizModalContent"></div>
-  </div>
-</div>
-
-<!-- 3. Teacher Add / Edit Lesson Modal -->
-<div id="editModal" class="app-modal fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 hidden">
-  <div class="modal-backdrop fixed inset-0" onclick="closeAllModals()"></div>
-  <div class="modal-container relative bg-white w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden z-10 border border-slate-200 max-h-[90vh] flex flex-col">
-    <div class="p-5 border-b border-slate-200 bg-white sticky top-0 z-10 flex items-center justify-between">
+      <!-- Grade & Sort Selectors -->
       <div class="flex items-center gap-2.5">
-        <img src="images/logo.png" alt="Logo" class="w-9 h-9 object-contain" />
-        <div>
-          <span class="text-xs font-bold text-red-600 uppercase">សាលាអន្តរជាតិ ហេមតុន</span>
-          <h3 class="text-base font-bold text-slate-900" id="editModalTitle">បង្កើតមេរៀន ឬលំហាត់ថ្មី</h3>
-        </div>
+        <select 
+          id="gradeSelect" 
+          class="px-3.5 py-2 text-xs sm:text-sm rounded-xl bg-white border border-slate-200 text-slate-800 font-semibold focus:ring-2 focus:ring-blue-900 focus:outline-none shadow-xs"
+        ></select>
+
+        <select 
+          id="sortSelect" 
+          class="px-3 py-2 text-xs sm:text-sm rounded-xl bg-white border border-slate-200 text-slate-700 font-medium focus:ring-2 focus:ring-blue-900 focus:outline-none shadow-xs"
+        >
+          <option value="newest">ថ្មីបំផុត</option>
+          <option value="views">មើលច្រើនជាងគេ</option>
+          <option value="bookmarks">ពេញនិយមបំផុត</option>
+        </select>
       </div>
-      <button onclick="closeAllModals()" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition">
-        <i class="fa-solid fa-xmark"></i>
+
+    </div>
+
+    <!-- Subject Filter Pills (Horizontal Scroll) -->
+    <div class="mb-7 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+      <div id="subjectFilters" class="flex items-center gap-2 min-w-max"></div>
+    </div>
+
+    <!-- Content Cards Grid -->
+    <div id="cardsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+
+    <!-- Empty State Illustration -->
+    <div id="emptyState" class="hidden text-center py-16 px-4">
+      <div class="w-20 h-20 mx-auto rounded-3xl bg-blue-50 text-blue-900 flex items-center justify-center text-3xl mb-4">
+        <i class="fa-solid fa-folder-open"></i>
+      </div>
+      <h3 class="text-lg font-bold text-slate-800 mb-1">រកមិនឃើញមេរៀន ឬលំហាត់ឡើយ</h3>
+      <p class="text-sm text-slate-500 max-w-sm mx-auto mb-5">
+        មិនមានមេរៀនត្រូវគ្នានឹងការស្វែងរករបស់អ្នកទេ។ សូមសាកល្បងផ្លាស់ប្តូរពាក្យគន្លឹះ ឬជ្រើសរើសកម្រិតថ្នាក់ផ្សេង។
+      </p>
+      <button 
+        onclick="state.searchQuery=''; state.selectedProgram='all'; state.selectedSubject='all'; state.selectedGrade='all'; document.getElementById('searchInput').value=''; document.getElementById('heroSearchInput').value=''; renderProgramTabs(); renderSubjectFilters(); renderGradeFilter(); renderCards();"
+        class="px-4 py-2 rounded-xl bg-blue-900 text-white text-xs font-semibold hover:bg-blue-950 transition"
+      >
+        សម្អាតការស្វែងរក
       </button>
     </div>
 
-    <form id="itemForm" class="p-6 space-y-4 overflow-y-auto flex-1">
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">ប្រភេទ *</label>
-          <select name="itemType" class="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 focus:outline-none" required>
-            <option value="lesson">មេរៀនទ្រឹស្តី (Lesson)</option>
-            <option value="exercise">កម្រងលំហាត់ (Exercise)</option>
-          </select>
+  </main>
+
+  <!-- ================= LOGIN MODAL ================= -->
+  <div id="loginModal" class="app-modal fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 hidden">
+    <div class="modal-backdrop fixed inset-0" onclick="closeAllModals()"></div>
+    <div class="modal-container relative bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden z-10 border border-slate-200">
+      
+      <!-- Modal Header -->
+      <div class="p-6 pb-4 border-b border-slate-100 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <img src="images/logo.png" alt="Logo" class="w-10 h-10 object-contain" />
+          <div>
+            <h3 class="text-lg font-black text-blue-950">ចូលប្រើប្រាស់ (Login)</h3>
+            <p class="text-xs text-slate-500">សាលាអន្តរជាតិ ហេមតុន</p>
+          </div>
         </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">មុខវិជ្ជា *</label>
-          <select name="itemSubject" class="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 focus:outline-none" required>
-            <option value="khmer">ភាសាខ្មែរ</option>
-            <option value="math">គណិតវិទ្យា</option>
-            <option value="science">វិទ្យាសាស្ត្រ & សង្គម</option>
-            <option value="english">ភាសាអង់គ្លេស</option>
-            <option value="chinese">ភាសាចិន (中文)</option>
-            <option value="art_music">សិល្បៈ & តន្ត្រី</option>
-            <option value="ict">កុំព្យូទ័រ & IT</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">កម្រិតថ្នាក់ *</label>
-          <select id="modalItemGrade" name="itemGrade" class="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 focus:outline-none" required></select>
-        </div>
-      </div>
-
-      <div>
-        <label class="block text-xs font-bold text-slate-700 mb-1">ចំណងជើងមេរៀន / លំហាត់ *</label>
-        <input type="text" name="itemTitle" placeholder="ឧ. រៀនព្យញ្ជនៈ ក ខ គ ឬ Phonics Fun" class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none" required />
-      </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">ឈ្មោះគ្រូបង្រៀន *</label>
-          <input type="text" name="itemTeacher" placeholder="ឧ. លោកគ្រូ អ៊ុក វិបុល" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none" required />
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">តំណភ្ជាប់វីដេអូ YouTube / MP4 (បើមាន)</label>
-          <input type="url" name="itemVideoUrl" placeholder="https://www.youtube.com/watch?v=..." class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none" />
-        </div>
-      </div>
-
-      <div>
-        <label class="block text-xs font-bold text-slate-700 mb-1">សេចក្តីសង្ខេបខ្លី</label>
-        <textarea name="itemSummary" rows="2" placeholder="សង្ខេបខ្លឹមសារសំខាន់ៗ..." class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none"></textarea>
-      </div>
-
-      <div>
-        <label class="block text-xs font-bold text-slate-700 mb-1">ខ្លឹមសារលម្អិត (គាំទ្ររូបមន្ត KaTeX Math $...$ និង $$...$$)</label>
-        <textarea name="itemContent" rows="6" placeholder="សរសេរខ្លឹមសារមេរៀន...&#10;ប្រើ $1 + 1 = 2$ សម្រាប់រូបមន្តគណិតវិទ្យា&#10;ប្រើ ### សម្រាប់ក្បាលចំណងជើងរង" class="w-full p-3 text-sm font-mono rounded-xl border border-slate-300 focus:outline-none bg-slate-50/50" required></textarea>
-      </div>
-
-      <!-- Dynamic Question Builder -->
-      <div id="questionsBuilderContainer" class="pt-3 border-t border-slate-200"></div>
-
-      <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-3 sticky bottom-0 bg-white py-2">
-        <button type="button" onclick="closeAllModals()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-semibold text-xs hover:bg-slate-100 transition">បោះបង់</button>
-        <button type="submit" class="px-5 py-2 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-bold text-xs shadow-md transition flex items-center gap-1.5">
-          <i class="fa-solid fa-floppy-disk"></i>
-          <span>រក្សាទុកទិន្នន័យ</span>
+        <button onclick="closeAllModals()" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
-    </form>
-  </div>
-</div>
 
-<!-- 4. Register Modal -->
-<div id="registerModal" class="app-modal fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 hidden">
-  <div class="modal-backdrop fixed inset-0" onclick="closeAllModals()"></div>
-  <div class="modal-container relative bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden z-10 border border-slate-200 max-h-[90vh] flex flex-col">
-    <div class="p-5 border-b border-slate-100 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <img src="images/logo.png" alt="Logo" class="w-10 h-10 object-contain" />
-        <div>
-          <h3 class="text-base font-bold text-blue-950">ចុះឈ្មោះគណនីថ្មី</h3>
-          <p class="text-xs text-slate-500">សាលាអន្តរជាតិ ហេមតុន</p>
+      <!-- Quick 1-Click Role Switcher Demo Cards -->
+      <div class="p-6 pt-4 pb-2 bg-slate-50/70 border-b border-slate-100">
+        <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+          <i class="fa-solid fa-bolt text-amber-500"></i>
+          ចុចចូលគណនីគំរូរហ័ស (Quick Demo Accounts)៖
+        </p>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <button 
+            type="button" 
+            onclick="quickLogin('admin')" 
+            class="p-2.5 rounded-xl border border-red-200 bg-white hover:bg-red-50 text-left transition flex items-center gap-2 group"
+          >
+            <div class="w-7 h-7 rounded-lg bg-red-600 text-white flex items-center justify-center text-xs flex-shrink-0">
+              <i class="fa-solid fa-user-shield"></i>
+            </div>
+            <div class="truncate">
+              <span class="font-bold text-red-700 block truncate">Admin</span>
+              <span class="text-[10px] text-slate-400">សិទ្ធិពេញលេញ</span>
+            </div>
+          </button>
+
+          <button 
+            type="button" 
+            onclick="quickLogin('teacher')" 
+            class="p-2.5 rounded-xl border border-blue-200 bg-white hover:bg-blue-50 text-left transition flex items-center gap-2 group"
+          >
+            <div class="w-7 h-7 rounded-lg bg-blue-900 text-white flex items-center justify-center text-xs flex-shrink-0">
+              <i class="fa-solid fa-chalkboard-user"></i>
+            </div>
+            <div class="truncate">
+              <span class="font-bold text-blue-900 block truncate">គ្រូបង្រៀន</span>
+              <span class="text-[10px] text-slate-400">បង្កើត/កែប្រែ</span>
+            </div>
+          </button>
+
+          <button 
+            type="button" 
+            onclick="quickLogin('student')" 
+            class="p-2.5 rounded-xl border border-emerald-200 bg-white hover:bg-emerald-50 text-left transition flex items-center gap-2 group"
+          >
+            <div class="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-xs flex-shrink-0">
+              <i class="fa-solid fa-user-graduate"></i>
+            </div>
+            <div class="truncate">
+              <span class="font-bold text-emerald-800 block truncate">សិស្សានុសិស្ស</span>
+              <span class="text-[10px] text-slate-400">រៀន & ធ្វើលំហាត់</span>
+            </div>
+          </button>
+
+          <button 
+            type="button" 
+            onclick="quickLogin('parent')" 
+            class="p-2.5 rounded-xl border border-amber-200 bg-white hover:bg-amber-50 text-left transition flex items-center gap-2 group"
+          >
+            <div class="w-7 h-7 rounded-lg bg-amber-600 text-white flex items-center justify-center text-xs flex-shrink-0">
+              <i class="fa-solid fa-users"></i>
+            </div>
+            <div class="truncate">
+              <span class="font-bold text-amber-800 block truncate">មាតាបិតា</span>
+              <span class="text-[10px] text-slate-400">តាមដានកូន</span>
+            </div>
+          </button>
         </div>
       </div>
-      <button onclick="closeAllModals()" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
+
+      <!-- Login Form -->
+      <form id="loginForm" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">ឈ្មោះគណនី (Username)</label>
+          <div class="relative">
+            <i class="fa-solid fa-user absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input 
+              type="text" 
+              name="loginUsername" 
+              placeholder="ឧទាហរណ៍៖ admin, teacher, student..." 
+              class="w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none" 
+              required 
+            />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">ពាក្យសម្ងាត់ (Password)</label>
+          <div class="relative">
+            <i class="fa-solid fa-lock absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input 
+              type="password" 
+              name="loginPassword" 
+              placeholder="••••••••" 
+              class="w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none" 
+              required 
+            />
+          </div>
+        </div>
+
+        <button 
+          type="submit" 
+          class="w-full py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-bold text-sm shadow-md transition flex items-center justify-center gap-2"
+        >
+          <i class="fa-solid fa-arrow-right-to-bracket"></i>
+          <span>ចូលប្រើប្រាស់ (Log In)</span>
+        </button>
+
+        <div class="text-center pt-2">
+          <p class="text-xs text-slate-500">
+            មិនទាន់មានគណនី? 
+            <button type="button" onclick="openRegisterModal()" class="text-blue-900 font-bold hover:underline">
+              ចុះឈ្មោះគណនីថ្មីនៅទីនេះ
+            </button>
+          </p>
+        </div>
+      </form>
+
     </div>
-
-    <form id="registerForm" class="p-6 space-y-3.5 overflow-y-auto flex-1">
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">ឈ្មោះពេញ *</label>
-          <input type="text" name="regName" placeholder="ឧ. ជា សុខា" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none" required />
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">ឈ្មោះគណនី (Username) *</label>
-          <input type="text" name="regUsername" placeholder="ឧ. sokha2026" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none" required />
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">ពាក្យសម្ងាត់ (Password) *</label>
-          <input type="password" name="regPassword" placeholder="••••••••" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none" required />
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">តួនាទី / សិទ្ធិប្រើប្រាស់ *</label>
-          <select name="regRole" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none bg-white font-bold" required>
-            <option value="student" selected>🎓 សិស្សានុសិស្ស (Student)</option>
-            <option value="teacher">👨‍🏫 គ្រូបង្រៀន (Teacher)</option>
-            <option value="parent">👨‍👩‍👧 មាតាបិតា (Parent)</option>
-            <option value="admin">🛡️ អ្នកគ្រប់គ្រង (Admin - សិទ្ធិទាំងអស់)</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">កម្រិតថ្នាក់</label>
-          <input type="text" name="regGrade" placeholder="ឧ. ថ្នាក់ទី១ ឬ Primary 1" value="ថ្នាក់ទី១" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none" />
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">ឈ្មោះកូន (បើជាមាតាបិតា)</label>
-          <input type="text" name="regChildName" placeholder="ឧ. សិស្ស សុខ ពិសិដ្ឋ" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:outline-none" />
-        </div>
-      </div>
-
-      <button type="submit" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition flex items-center justify-center gap-2 mt-4">
-        <i class="fa-solid fa-user-plus"></i>
-        <span>បង្កើតគណនីភ្លាមៗ</span>
-      </button>
-    </form>
   </div>
-</div>
 
-<!-- 5. Parent Dashboard Modal -->
-<div id="parentModal" class="app-modal fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 hidden">
-  <div class="modal-backdrop fixed inset-0" onclick="closeAllModals()"></div>
-  <div class="modal-container relative bg-white w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden z-10 border border-slate-200">
-    <div id="parentModalContent"></div>
+  <!-- ================= REGISTER MODAL ================= -->
+  <div id="registerModal" class="app-modal fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 hidden">
+    <div class="modal-backdrop fixed inset-0" onclick="closeAllModals()"></div>
+    <div class="modal-container relative bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden z-10 border border-slate-200 max-h-[90vh] flex flex-col">
+      
+      <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <img src="images/logo.png" alt="Logo" class="w-10 h-10 object-contain" />
+          <div>
+            <h3 class="text-lg font-black text-blue-950">ចុះឈ្មោះគណនីថ្មី</h3>
+            <p class="text-xs text-slate-500">សាលាអន្តរជាតិ ហេមតុន</p>
+          </div>
+        </div>
+        <button onclick="closeAllModals()" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="registerForm" class="p-6 space-y-4 overflow-y-auto flex-1">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">ឈ្មោះពេញ (Full Name) *</label>
+            <input type="text" name="regName" placeholder="ឧទាហរណ៍៖ សុខ សំណាង" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none" required />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">ឈ្មោះគណនី (Username) *</label>
+            <input type="text" name="regUsername" placeholder="ឧទាហរណ៍៖ samnang2026" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none" required />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">ពាក្យសម្ងាត់ (Password) *</label>
+            <input type="password" name="regPassword" placeholder="••••••••" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none" required />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">តួនាទី / សិទ្ធិប្រើប្រាស់ (Role) *</label>
+            <select name="regRole" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none bg-white font-semibold" required>
+              <option value="student" selected>🎓 សិស្សានុសិស្ស (Student)</option>
+              <option value="teacher">👨‍🏫 លោកគ្រូ-អ្នកគ្រូ (Teacher)</option>
+              <option value="parent">👨‍👩‍👧 មាតាបិតា (Parent)</option>
+              <option value="admin">🛡️ អ្នកគ្រប់គ្រង (Admin)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">កម្រិតថ្នាក់</label>
+            <select name="regGrade" class="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none bg-white">
+              <option value="ទូទៅ">ទូទៅ (All)</option>
+              <option value="មត្តេយ្យទាប">មត្តេយ្យទាប</option>
+              <option value="មត្តេយ្យមធ្យម">មត្តេយ្យមធ្យម</option>
+              <option value="មត្តេយ្យខ្ពស់">មត្តេយ្យខ្ពស់</option>
+              <option value="ថ្នាក់ទី១" selected>ថ្នាក់ទី១</option>
+              <option value="ថ្នាក់ទី២">ថ្នាក់ទី២</option>
+              <option value="ថ្នាក់ទី៣">ថ្នាក់ទី៣</option>
+              <option value="ថ្នាក់ទី៤">ថ្នាក់ទី៤</option>
+              <option value="ថ្នាក់ទី៥">ថ្នាក់ទី៥</option>
+              <option value="ថ្នាក់ទី៦">ថ្នាក់ទី៦</option>
+              <option value="Pre-Nursery">Pre-Nursery</option>
+              <option value="Nursery">Nursery</option>
+              <option value="K1">K1</option>
+              <option value="K2">K2</option>
+              <option value="K3">K3</option>
+              <option value="K4">K4</option>
+              <option value="Primary 1">Primary 1</option>
+              <option value="Primary 2">Primary 2</option>
+              <option value="Primary 3">Primary 3</option>
+              <option value="GEP 1">GEP 1</option>
+              <option value="GEP 2">GEP 2</option>
+              <option value="GEP 3">GEP 3</option>
+              <option value="ថ្នាក់ក្រៅម៉ោង ភាសាអង់គ្លេស">ថ្នាក់ក្រៅម៉ោង ភាសាអង់គ្លេស</option>
+              <option value="ថ្នាក់ក្រៅម៉ោង ភាសាចិន">ថ្នាក់ក្រៅម៉ោង ភាសាចិន</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">ឈ្មោះកូន (បើជាមាតាបិតា)</label>
+            <input type="text" name="regChildName" placeholder="ឧទាហរណ៍៖ សិស្ស សុខ ពិសិដ្ឋ" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">អ៊ីមែល (Email)</label>
+            <input type="email" name="regEmail" placeholder="name@example.com" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">លេខទូរស័ព្ទ</label>
+            <input type="tel" name="regPhone" placeholder="012 345 678" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none" />
+          </div>
+        </div>
+
+        <button 
+          type="submit" 
+          class="w-full py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow-md transition flex items-center justify-center gap-2 mt-4"
+        >
+          <i class="fa-solid fa-user-plus"></i>
+          <span>បង្កើតគណនីភ្លាមៗ</span>
+        </button>
+
+        <div class="text-center pt-2">
+          <p class="text-xs text-slate-500">
+            មានគណនីរួចហើយ? 
+            <button type="button" onclick="openLoginModal()" class="text-blue-900 font-bold hover:underline">
+              ចូលប្រើប្រាស់នៅទីនេះ
+            </button>
+          </p>
+        </div>
+      </form>
+
+    </div>
   </div>
-</div>
 
-<!-- Floating Toast -->
-<div id="toast" class="toast" style="display: none;"></div>
+  <!-- ================= ADMIN USER MANAGEMENT MODAL ================= -->
+  <div id="userManagementModal" class="app-modal fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 hidden">
+    <div class="modal-backdrop fixed inset-0" onclick="closeAllModals()"></div>
+    <div class="modal-container relative bg-white w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden z-10 border border-slate-200 max-h-[90vh] flex flex-col">
+      
+      <!-- Modal Header -->
+      <div class="p-6 border-b border-slate-200 bg-gradient-to-r from-red-50 to-rose-50 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-2xl bg-red-600 text-white flex items-center justify-center text-xl shadow-md">
+            <i class="fa-solid fa-users-gear"></i>
+          </div>
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-red-700">ផ្ទាំងគ្រប់គ្រងអភិបាល (Super Admin)</span>
+            <h3 class="text-lg sm:text-xl font-black text-slate-900">
+              ការគ្រប់គ្រងអ្នកប្រើប្រាស់ និងសិទ្ធិ (<span id="totalUsersCount">0</span> នាក់)
+            </h3>
+          </div>
+        </div>
+        <button onclick="closeAllModals()" class="w-8 h-8 rounded-lg bg-white hover:bg-slate-100 text-slate-600 flex items-center justify-center transition border border-slate-200">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
 
-<!-- Core Scripts -->
-<script src="data/sample-data.js"></script>
-<script src="js/storage.js"></script>
-<script src="js/app.js"></script>
+      <div class="p-6 overflow-y-auto flex-1 space-y-6">
+        
+        <!-- Admin Add New User Form Section -->
+        <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200">
+          <h4 class="font-bold text-slate-800 text-sm mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-user-plus text-blue-900"></i>
+            បង្កើតគណនីអ្នកប្រើប្រាស់ថ្មី (បង្កើតបានគ្រប់ Role)
+          </h4>
 
+          <form id="adminCreateUserForm" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">ឈ្មោះពេញ</label>
+              <input type="text" name="adminNewName" placeholder="ឧទាហរណ៍៖ ជា សុខា" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-900" required />
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Username</label>
+              <input type="text" name="adminNewUsername" placeholder="ឧទាហរណ៍៖ sokha26" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-900" required />
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Password</label>
+              <input type="password" name="adminNewPassword" placeholder="••••••••" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-900" required />
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">តួនាទី / សិទ្ធិ</label>
+              <select name="adminNewRole" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-900 bg-white font-bold text-slate-800" required>
+                <option value="student">🎓 សិស្ស (Student)</option>
+                <option value="teacher">👨‍🏫 គ្រូ (Teacher)</option>
+                <option value="parent">👨‍👩‍👧 មាតាបិតា (Parent)</option>
+                <option value="admin">🛡️ Admin (អភិបាល)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">កម្រិតថ្នាក់</label>
+              <input type="text" name="adminNewGrade" placeholder="ឧទាហរណ៍៖ ថ្នាក់ទី១ ឬ Primary 1" value="ថ្នាក់ទី១" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-900" />
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">អ៊ីមែល</label>
+              <input type="email" name="adminNewEmail" placeholder="sokha@hampton.edu.kh" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-900" />
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">លេខទូរស័ព្ទ</label>
+              <input type="tel" name="adminNewPhone" placeholder="012 345 678" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-900" />
+            </div>
+
+            <div class="flex items-end">
+              <button type="submit" class="w-full py-2 px-3 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-bold transition flex items-center justify-center gap-1.5 shadow-xs">
+                <i class="fa-solid fa-plus text-xs"></i>
+                <span>បញ្ចូល User ថ្មី</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Users Table -->
+        <div class="overflow-x-auto rounded-2xl border border-slate-200 shadow-xs">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-100/80 text-[11px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200">
+                <th class="p-3 text-center">#</th>
+                <th class="p-3">អ្នកប្រើប្រាស់</th>
+                <th class="p-3">តួនាទី / សិទ្ធិ</th>
+                <th class="p-3">ថ្នាក់</th>
+                <th class="p-3 hidden sm:table-cell">កាលបរិច្ឆេទ</th>
+                <th class="p-3 text-right">សកម្មភាព</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody"></tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= PARENT DASHBOARD MODAL ================= -->
+  <div id="parentModal" class="app-modal fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 hidden">
+    <div class="modal-backdrop fixed inset-0" onclick="closeAllModals()"></div>
+    <div class="modal-container relative bg-white w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden z-10 border border-slate-200">
+      <div id="parentModalContent"></div>
+    </div>
+  </div>
+
+  <!-- ================= DETAIL MODAL (Read Lesson & Video) ================= -->
+  <div id="detailModal" class="app-modal fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 hidden">
+    <div class="modal-backdrop fixed inset-0" onclick="closeAllModals()"></div>
+    <div class="modal-container relative bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden z-10 border border-slate-200">
+      <div id="detailModalContent"></div>
+    </div>
+  </div>
+
+  <!-- ================= QUIZ MODAL (Interactive Testing) ================= -->
+  <div id="quizModal" class="app-modal fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 hidden">
+    <div class="modal-backdrop fixed inset-0" onclick="closeAllModals()"></div>
+    <div class="modal-container relative bg-white w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden z-10 border border-slate-200">
+      <div id="quizModalContent"></div>
+    </div>
+  </div>
+
+  <!-- ================= TEACHER ADD / EDIT MODAL ================= -->
+  <div id="editModal" class="app-modal fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 hidden">
+    <div class="modal-backdrop fixed inset-0" onclick="closeAllModals()"></div>
+    <div class="modal-container relative bg-white w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden z-10 border border-slate-200 max-h-[90vh] flex flex-col">
+      
+      <div class="p-6 border-b border-slate-200 bg-white sticky top-0 z-10 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <img src="images/logo.png" alt="Logo" class="w-10 h-10 object-contain" />
+          <div>
+            <span class="text-xs font-bold text-red-600 uppercase tracking-wider">សាលាអន្តរជាតិ ហេមតុន</span>
+            <h3 class="text-lg font-bold text-slate-900" id="editModalTitle">បង្កើតមេរៀន ឬលំហាត់ថ្មី</h3>
+          </div>
+        </div>
+        <button onclick="closeAllModals()" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="itemForm" class="p-6 md:p-8 space-y-5 overflow-y-auto flex-1">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">ប្រភេទមាតិកា *</label>
+            <select name="itemType" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none bg-white" required>
+              <option value="lesson">មេរៀនទ្រឹស្តី (Lesson)</option>
+              <option value="exercise">កម្រងលំហាត់ (Exercise)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">មុខវិជ្ជា *</label>
+            <select name="itemSubject" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none bg-white" required>
+              <option value="khmer">ភាសាខ្មែរ</option>
+              <option value="math">គណិតវិទ្យា</option>
+              <option value="science">វិទ្យាសាស្ត្រ & សង្គម</option>
+              <option value="english">ភាសាអង់គ្លេស</option>
+              <option value="chinese">ភាសាចិន (中文)</option>
+              <option value="art_music">សិល្បៈ & តន្ត្រី</option>
+              <option value="ict">កុំព្យូទ័រ & IT</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">កម្រិតថ្នាក់ (សាលា ហេមតុន) *</label>
+            <select id="modalItemGrade" name="itemGrade" class="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none bg-white font-medium" required></select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">ចំណងជើងមេរៀន ឬលំហាត់ *</label>
+          <input type="text" name="itemTitle" placeholder="ឧទាហរណ៍៖ រៀនព្យញ្ជនៈខ្មែរ ក ខ គ ឬ Phonics Fun Short Vowels" class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none" required />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">ឈ្មោះលោកគ្រូ/អ្នកគ្រូ *</label>
+          <input type="text" name="itemTeacher" placeholder="ឧទាហរណ៍៖ លោកគ្រូ អ៊ុក វិបុល / Teacher Sarah Jenkins" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none" required />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">សេចក្តីសង្ខេបខ្លី (Summary)</label>
+          <textarea name="itemSummary" rows="2" placeholder="សង្ខេបខ្លឹមសារសំខាន់ៗនៃមេរៀន..." class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">តំណភ្ជាប់វីដេអូ YouTube ឬ MP4 (បើមាន)</label>
+          <div class="relative">
+            <i class="fa-solid fa-link absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input type="url" name="itemVideoUrl" placeholder="https://www.youtube.com/watch?v=..." class="w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none" />
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-xs font-bold text-slate-700">ខ្លឹមសារលម្អិតនៃមេរៀន / លំហាត់ (គាំទ្ររូបមន្ត KaTeX Math $...$ និង $$...$$)</label>
+            <span class="text-[11px] text-blue-900 font-medium">គាំទ្រ Markdown & Math</span>
+          </div>
+          <textarea name="itemContent" rows="7" placeholder="សរសេរខ្លឹមសារមេរៀន ឬលំហាត់នៅទីនេះ...&#10;ប្រើ $1 + 1 = 2$ សម្រាប់រូបមន្តលេខ&#10;ប្រើ ### សម្រាប់ក្បាលចំណងជើងរង" class="w-full p-3.5 text-sm font-mono rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none bg-slate-50/50" required></textarea>
+        </div>
+
+        <div id="questionsBuilderContainer" class="pt-4 border-t border-slate-200"></div>
+
+        <div class="pt-4 border-t border-slate-200 flex items-center justify-end gap-3 sticky bottom-0 bg-white py-3">
+          <button type="button" onclick="closeAllModals()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-100 transition">
+            បោះបង់
+          </button>
+          <button type="submit" class="px-6 py-2 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-bold text-sm shadow-md transition flex items-center gap-2">
+            <i class="fa-solid fa-floppy-disk"></i>
+            <span>រក្សាទុកទិន្នន័យ</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= BACKUP & SETTINGS MODAL ================= -->
+  <div id="backupModal" class="app-modal fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 hidden">
+    <div class="modal-backdrop fixed inset-0" onclick="closeAllModals()"></div>
+    <div class="modal-container relative bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden z-10 border border-slate-200">
+      <div class="p-6 border-b border-slate-200 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <img src="images/logo.png" alt="Logo" class="w-8 h-8 object-contain" />
+          <h3 class="text-base font-bold text-slate-900">ការគ្រប់គ្រងទិន្នន័យ (Data & Backup)</h3>
+        </div>
+        <button onclick="closeAllModals()" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-4 text-sm">
+        <p class="text-slate-600 text-xs leading-relaxed">
+          សម្រាប់ <strong>Admin</strong>៖ លោកអ្នកអាចទាញយកទិន្នន័យមេរៀន និង Users ទាំងអស់រក្សាទុកលើកុំព្យូទ័រ (Export) ឬបញ្ចូលទិន្នន័យពីឯកសារ JSON មកវិញ (Import)។
+        </p>
+
+        <div class="space-y-3">
+          <button onclick="handleExportData()" class="w-full p-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 font-bold text-xs sm:text-sm flex items-center justify-between transition border border-blue-200">
+            <div class="flex items-center gap-2.5">
+              <i class="fa-solid fa-download text-base"></i>
+              <span>ទាញយកទិន្នន័យទាំងអស់ (Export Full JSON)</span>
+            </div>
+            <i class="fa-solid fa-chevron-right text-xs opacity-70"></i>
+          </button>
+
+          <label class="w-full p-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs sm:text-sm flex items-center justify-between transition border border-slate-200 cursor-pointer">
+            <div class="flex items-center gap-2.5">
+              <i class="fa-solid fa-upload text-base text-slate-500"></i>
+              <span>បញ្ចូលទិន្នន័យពីឯកសារ (Import JSON)</span>
+            </div>
+            <input type="file" accept=".json" onchange="handleImportFile(event)" class="hidden" />
+            <i class="fa-solid fa-chevron-right text-xs opacity-70"></i>
+          </label>
+
+          <button onclick="handleResetDefaults()" class="w-full p-3 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs sm:text-sm flex items-center justify-between transition border border-red-200">
+            <div class="flex items-center gap-2.5">
+              <i class="fa-solid fa-rotate-left text-base text-red-600"></i>
+              <span>កំណត់ឡើងវិញទិន្នន័យដើមរបស់សាលា</span>
+            </div>
+            <i class="fa-solid fa-chevron-right text-xs opacity-70"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Toast -->
+  <div 
+    id="toast" 
+    class="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-2xl bg-blue-950 text-white shadow-xl opacity-0 pointer-events-none translate-y-4 transition-all duration-300 max-w-sm"
+  >
+    <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+    <span id="toastMessage" class="text-xs sm:text-sm font-medium">ប្រតិបត្តិការជោគជ័យ</span>
+  </div>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="bg-white border-t border-slate-200 py-10 mt-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+        
+        <div class="md:col-span-2">
+          <div class="flex items-center gap-3 mb-3">
+            <img src="images/logo.png" alt="Logo" class="w-12 h-12 object-contain" />
+            <div>
+              <h3 class="text-lg font-black text-blue-950">សាលាអន្តរជាតិ ហេមតុន</h3>
+              <p class="text-xs font-bold text-red-600 uppercase">Hampton International School</p>
+            </div>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-500 max-w-md leading-relaxed mb-3">
+            ឃ្លាំងផ្ទុកមេរៀន វីដេអូបង្រៀន និងកម្រងលំហាត់អនុវត្ត ស្របតាមកម្មវិធីសិក្សាជាតិ និងអន្តរជាតិ សម្រាប់ <strong>សិស្ស, គ្រូ, មាតាបិតា និង Admin</strong>។
+          </p>
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-blue-50 text-blue-900 text-xs font-medium border border-blue-200">
+            <i class="fa-solid fa-shield-halved text-blue-600"></i>
+            <span>ទទួលស្គាល់ដោយក្រសួងអប់រំ យុវជន និងកីឡា</span>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-blue-950 text-sm mb-3">កម្មវិធីសិក្សាសាលា</h4>
+          <ul class="space-y-2 text-xs text-slate-600">
+            <li><span class="text-blue-900 font-bold">•</span> មត្តេយ្យខ្មែរ៖ ទាប, មធ្យម, ខ្ពស់</li>
+            <li><span class="text-blue-900 font-bold">•</span> បឋមសិក្សាខ្មែរ៖ ថ្នាក់ទី១ ដល់ ទី៦</li>
+            <li><span class="text-red-600 font-bold">•</span> English EY: Pre-Nursery, Nursery, K1 - K4</li>
+            <li><span class="text-red-600 font-bold">•</span> English Primary: Primary 1, 2, 3 & GEP 1, 2, 3</li>
+            <li><span class="text-amber-600 font-bold">•</span> ថ្នាក់ក្រៅម៉ោង៖ ភាសាអង់គ្លេស & ភាសាចិន (中文)</li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-blue-950 text-sm mb-3">សិទ្ធិ និងតួនាទីក្នុងប្រព័ន្ធ</h4>
+          <ul class="space-y-2 text-xs text-slate-600">
+            <li><span class="text-red-600 font-bold">🛡️ Admin</span> ៖ មានសិទ្ធិពេញលេញធ្វើអ្វីបានទាំងអស់ (Users, Content, Backup)</li>
+            <li><span class="text-blue-900 font-bold">👨‍🏫 គ្រូ</span> ៖ បង្កើតមេរៀន/លំហាត់, កែប្រែ, មើលពិន្ទុ</li>
+            <li><span class="text-emerald-700 font-bold">🎓 សិស្ស</span> ៖ អានមេរៀន, មើលវីដេអូ, ធ្វើលំហាត់ Quiz</li>
+            <li><span class="text-amber-700 font-bold">👨‍👩‍👧 មាតាបិតា</span> ៖ តាមដានការរៀន និងលទ្ធផលពិន្ទុរបស់កូន</li>
+          </ul>
+        </div>
+
+      </div>
+
+      <div class="pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-3">
+        <p>© 2026 សាលាអន្តរជាតិ ហេមតុន (Hampton International School) - រក្សាសិទ្ធិគ្រប់យ៉ាង</p>
+        <p class="flex items-center gap-1">
+          <span>បណ្តុះបណ្តាលទំពាំងស្នងឫស្សីកម្ពុជា</span>
+          <i class="fa-solid fa-heart text-red-600"></i>
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Application Scripts -->
+  <script src="data/sample-data.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
