@@ -268,8 +268,16 @@ function renderUserNav() {
     container.innerHTML = `
       <div class="flex items-center gap-2">
         <button 
+          onclick="openRegisterModal()" 
+          class="px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold shadow-xs transition flex items-center gap-1.5 whitespace-nowrap"
+          title="ចុះឈ្មោះគណនីថ្មី"
+        >
+          <i class="fa-solid fa-user-plus text-xs"></i>
+          <span>+ បង្កើតគណនី</span>
+        </button>
+        <button 
           onclick="openLoginModal()" 
-          class="px-3.5 py-1.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs sm:text-sm font-bold shadow-xs transition flex items-center gap-1.5"
+          class="px-3.5 py-1.5 sm:py-2 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs sm:text-sm font-bold shadow-xs transition flex items-center gap-1.5 whitespace-nowrap"
         >
           <i class="fa-solid fa-arrow-right-to-bracket text-xs"></i>
           <span>ចូលប្រព័ន្ធ (Login)</span>
