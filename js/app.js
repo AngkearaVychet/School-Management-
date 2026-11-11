@@ -428,7 +428,7 @@ function handleLogout() {
   renderCards();
 }
 
-// ចុះឈ្មោះ Register (អនុញ្ញាតតែសិស្ស និងមាតាបិតា)
+// ចុះឈ្មោះ Register (អនុញ្ញាត សិស្ស, គ្រូ និងមាតាបិតា)
 function openRegisterModal() {
   closeAllModals();
   const modal = document.getElementById('registerModal');
@@ -1200,7 +1200,7 @@ function renderCards() {
           </button>
           <button onclick="openRegisterModal()" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold shadow-sm transition flex items-center gap-2">
             <i class="fa-solid fa-user-plus"></i>
-            <span>ចុះឈ្មោះសិស្ស / មាតាបិតា</span>
+            <span>ចុះឈ្មោះគណនីថ្មី</span>
           </button>
         </div>
       </div>

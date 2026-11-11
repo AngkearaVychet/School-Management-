@@ -279,8 +279,8 @@ const StorageManager = {
     const actor = this.getCurrentUser();
 
     if (options.isSelfRegister) {
-      if (!['student', 'parent'].includes(userData.role)) {
-        return { success: false, message: 'ការចុះឈ្មោះដោយខ្លួនឯងអនុញ្ញាតតែតួនាទី សិស្ស ឬ មាតាបិតា ប៉ុណ្ណោះ!' };
+      if (!['student', 'teacher', 'parent'].includes(userData.role)) {
+        return { success: false, message: 'ការចុះឈ្មោះដោយខ្លួនឯងអនុញ្ញាតតែតួនាទី សិស្ស, គ្រូ ឬ មាតាបិតា ប៉ុណ្ណោះ!' };
       }
     } else if (!actor || !this.canManageUser(actor, userData.role)) {
       return { success: false, message: 'អ្នកមិនមានសិទ្ធិបង្កើតគណនីតួនាទីនេះទេ!' };
