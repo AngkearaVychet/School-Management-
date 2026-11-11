@@ -128,9 +128,14 @@ function getDriveActionLinks(rawUrl) {
   };
 }
 
-// គ្រប់គ្រងពេលចុច Link គំរូ Google Drive កុំឱ្យចេញ 404
+// គ្រប់គ្រងពេលចុច Link គំរូ Google Drive កុំឱ្យចេញ 404 និងកត់ត្រាការមើល/ទាញយក
 function handleSampleDriveLink(event, actionType, url, fileName) {
   if (url && url !== '#' && !url.includes('SAMPLE_FILE_ID')) {
+    StorageManager.recordActivity(
+      actionType === 'download' ? 'download_doc' : 'view_doc',
+      `${actionType === 'download' ? 'ទាញយកឯកសារ' : 'បើកមើលឯកសារ'}៖ ${fileName || url}`,
+      state.activeItem
+    );
     return true; // បើក Link ពិតក្នុង Tab ថ្មីធម្មតា
   }
   if (event) event.preventDefault();
@@ -138,7 +143,7 @@ function handleSampleDriveLink(event, actionType, url, fileName) {
   const label = (fileName || 'ឯកសារសិក្សា_គំរូ.pdf').trim();
   const actionTitle = actionType === 'download' ? 'ទាញយកឯកសារ (គំរូ)' : 'មើលឯកសារ (គំរូ)';
   const currentUser = StorageManager.getCurrentUser();
-  const canEdit = currentUser && (currentUser.role === 'admin' || currentUser.role === 'teacher');
+  const canEdit = currentUser && ['admin', 'head', 'teacher'].includes(currentUser.role);
 
   const modal = document.getElementById('detailModal');
   const modalContent = document.getElementById('detailModalContent');
@@ -250,15 +255,16 @@ function renderUserNav() {
   const scoreboardBtn = document.getElementById('scoreboardBtn');
   const featuredEditBtn = document.getElementById('featuredEditBtn');
   const adminManageBtn = document.getElementById('adminManageBtn');
+  const userManageBtnLabel = document.getElementById('userManageBtnLabel');
+  const studentRecordsBtn = document.getElementById('studentRecordsBtn');
   const parentDashBtn = document.getElementById('parentDashBtn');
   const backupBtn = document.getElementById('backupBtn');
-  
+
   if (!container) return;
 
   const currentUser = StorageManager.getCurrentUser();
 
   if (!currentUser) {
-    // បង្ហាញប៊ូតុង Login / Register ពេលមិនទាន់ចូល
     container.innerHTML = `
       <div class="flex items-center gap-2">
         <button 
@@ -266,88 +272,89 @@ function renderUserNav() {
           class="px-3.5 py-1.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs sm:text-sm font-bold shadow-xs transition flex items-center gap-1.5"
         >
           <i class="fa-solid fa-arrow-right-to-bracket text-xs"></i>
-          <span>ចូលប្រើ (Login)</span>
-        </button>
-        <button 
-          onclick="openRegisterModal()" 
-          class="hidden sm:inline-flex px-3 py-1.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs sm:text-sm font-semibold transition"
-        >
-          ចុះឈ្មោះ
+          <span>ចូលប្រព័ន្ធ (Login)</span>
         </button>
       </div>
     `;
 
-    if (teacherAddBtn) teacherAddBtn.classList.add('hidden');
-    if (scoreboardBtn) scoreboardBtn.classList.add('hidden');
-    if (featuredEditBtn) featuredEditBtn.classList.add('hidden');
-    if (adminManageBtn) adminManageBtn.classList.add('hidden');
-    if (parentDashBtn) parentDashBtn.classList.add('hidden');
-    if (backupBtn) backupBtn.classList.add('hidden');
+    [teacherAddBtn, scoreboardBtn, featuredEditBtn, adminManageBtn, studentRecordsBtn, parentDashBtn, backupBtn].forEach(el => {
+      if (el) el.classList.add('hidden');
+    });
     return;
   }
 
-  // កំណត់ Badge ពណ៌តាម Role
-  const roleBadgeConfig = {
-    admin: { label: 'Admin (គ្រប់គ្រង)', bg: 'bg-red-100 text-red-800 border-red-300', dot: 'bg-red-600' },
-    teacher: { label: 'គ្រូបង្រៀន', bg: 'bg-blue-100 text-blue-900 border-blue-300', dot: 'bg-blue-600' },
-    student: { label: 'សិស្ស', bg: 'bg-emerald-100 text-emerald-900 border-emerald-300', dot: 'bg-emerald-600' },
-    parent: { label: 'មាតាបិតា', bg: 'bg-amber-100 text-amber-900 border-amber-300', dot: 'bg-amber-600' }
-  };
+  const badgeInfo = ROLE_META[currentUser.role] || ROLE_META.student;
+  const canManageUsers = StorageManager.hasPermission('manage_users') || StorageManager.hasPermission('manage_students');
+  const canCreate = StorageManager.hasPermission('create_lesson');
+  const canScoreboard = StorageManager.hasPermission('view_scoreboard');
+  const canParentDash = StorageManager.hasPermission('view_parent_dashboard');
+  const canOwnRecords = StorageManager.hasPermission('view_own_records');
+  const canBackup = StorageManager.hasPermission('backup_system');
 
-  const badgeInfo = roleBadgeConfig[currentUser.role] || roleBadgeConfig.student;
+  const manageLabel = currentUser.role === 'teacher'
+    ? 'គ្រប់គ្រងសិស្ស'
+    : currentUser.role === 'head'
+      ? 'គ្រូ សិស្ស & មាតាបិតា'
+      : 'គ្រប់គ្រង User';
 
   container.innerHTML = `
     <div class="relative group">
-      <!-- Profile Button / Dropdown Trigger -->
       <button class="flex items-center gap-2.5 p-1 sm:p-1.5 rounded-2xl border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 transition shadow-xs">
-        <div class="w-8 h-8 rounded-xl ${currentUser.avatarBg || 'bg-blue-900'} text-white flex items-center justify-center text-xs font-bold shadow-xs">
-          <i class="fa-solid ${currentUser.avatarIcon || 'fa-user'}"></i>
+        <div class="w-8 h-8 rounded-xl ${currentUser.avatarBg || badgeInfo.bg} text-white flex items-center justify-center text-xs font-bold shadow-xs">
+          <i class="fa-solid ${currentUser.avatarIcon || badgeInfo.icon}"></i>
         </div>
         <div class="text-left hidden sm:block pr-1">
-          <p class="text-xs font-bold text-slate-800 leading-tight max-w-[120px] truncate">${currentUser.name}</p>
-          <span class="inline-flex items-center gap-1 text-[10px] font-bold ${badgeInfo.bg} px-1.5 py-0.2 rounded-md border">
+          <p class="text-xs font-bold text-slate-800 leading-tight max-w-[130px] truncate">${escapeHtml(currentUser.name)}</p>
+          <span class="inline-flex items-center gap-1 text-[10px] font-bold ${badgeInfo.badge} px-1.5 py-0.2 rounded-md border">
             <span class="w-1.5 h-1.5 rounded-full ${badgeInfo.dot}"></span>
-            ${badgeInfo.label}
+            ${escapeHtml(badgeInfo.short)}
           </span>
         </div>
         <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 mr-1 hidden sm:block"></i>
       </button>
 
-      <!-- Dropdown Menu -->
-      <div class="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 py-2 hidden group-hover:block hover:block z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-        <!-- User Info Header -->
+      <div class="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 py-2 hidden group-hover:block hover:block z-50">
         <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/70 rounded-t-2xl">
           <p class="text-xs text-slate-400 font-medium">គណនីបច្ចុប្បន្ន</p>
-          <p class="text-sm font-bold text-slate-900 truncate">${currentUser.name}</p>
-          <p class="text-[11px] text-slate-500 font-mono truncate">@${currentUser.username} • ${currentUser.grade || 'ទូទៅ'}</p>
+          <p class="text-sm font-bold text-slate-900 truncate">${escapeHtml(currentUser.name)}</p>
+          <p class="text-[11px] text-slate-500 font-mono truncate">@${escapeHtml(currentUser.username)} • ${escapeHtml(currentUser.grade || 'ទូទៅ')}</p>
         </div>
 
         <div class="py-1 text-xs">
-          ${currentUser.role === 'admin' ? `
+          ${canOwnRecords ? `
+            <button onclick="openStudentRecordsModal()" class="w-full px-4 py-2 text-left hover:bg-emerald-50 text-emerald-900 font-bold flex items-center gap-2.5">
+              <i class="fa-solid fa-clipboard-check text-emerald-600 text-sm"></i>
+              <span>ប្រវត្តិសិក្សា &amp; ពិន្ទុរបស់ខ្ញុំ</span>
+            </button>
+          ` : ''}
+
+          ${canManageUsers ? `
             <button onclick="openUserManagementModal()" class="w-full px-4 py-2 text-left hover:bg-blue-50 text-blue-900 font-bold flex items-center gap-2.5">
               <i class="fa-solid fa-users-gear text-red-600 text-sm"></i>
-              <span>គ្រប់គ្រងអ្នកប្រើប្រាស់ (Users)</span>
+              <span>${escapeHtml(manageLabel)}</span>
             </button>
           ` : ''}
 
-          ${currentUser.role === 'parent' ? `
+          ${canScoreboard ? `
+            <button onclick="openScoreboardModal()" class="w-full px-4 py-2 text-left hover:bg-indigo-50 text-indigo-900 font-bold flex items-center gap-2.5">
+              <i class="fa-solid fa-table-list text-indigo-600 text-sm"></i>
+              <span>ស្រង់ពិន្ទុ &amp; កំណត់ត្រាប្រព័ន្ធ</span>
+            </button>
+          ` : ''}
+
+          ${canParentDash ? `
             <button onclick="openParentModal()" class="w-full px-4 py-2 text-left hover:bg-amber-50 text-amber-900 font-bold flex items-center gap-2.5">
               <i class="fa-solid fa-chart-line text-amber-600 text-sm"></i>
-              <span>តាមដានការរៀនរបស់កូន</span>
+              <span>${currentUser.role === 'parent' ? 'តាមដានព័ត៌មានកូន' : 'តាមដានសិស្ស (Parent View)'}</span>
             </button>
           ` : ''}
 
-          ${currentUser.role === 'admin' || currentUser.role === 'teacher' ? `
+          ${canCreate ? `
             <button onclick="openAddModal()" class="w-full px-4 py-2 text-left hover:bg-slate-50 text-slate-700 font-semibold flex items-center gap-2.5">
               <i class="fa-solid fa-circle-plus text-blue-900 text-sm"></i>
               <span>បន្ថែមមេរៀន / លំហាត់ថ្មី</span>
             </button>
           ` : ''}
-
-          <button onclick="openRegisterModal()" class="w-full px-4 py-2 text-left hover:bg-emerald-50 text-emerald-800 font-bold flex items-center gap-2.5">
-            <i class="fa-solid fa-user-plus text-emerald-600 text-sm"></i>
-            <span>+ បង្កើតគណនីថ្មី (Create Account)</span>
-          </button>
 
           <button onclick="openLoginModal()" class="w-full px-4 py-2 text-left hover:bg-slate-50 text-slate-700 font-semibold flex items-center gap-2.5">
             <i class="fa-solid fa-users-viewfinder text-slate-500 text-sm"></i>
@@ -365,41 +372,14 @@ function renderUserNav() {
     </div>
   `;
 
-  // បង្ហាញ ឬលាក់ប៊ូតុងតាមសិទ្ធិ
-  const canCreate = StorageManager.hasPermission('create_lesson');
-  const isAdmin = currentUser.role === 'admin';
-  const isParent = currentUser.role === 'parent';
-
-  if (teacherAddBtn) {
-    if (canCreate) teacherAddBtn.classList.remove('hidden');
-    else teacherAddBtn.classList.add('hidden');
-  }
-
-  const canScoreboard = StorageManager.hasPermission('view_scoreboard');
-  if (scoreboardBtn) {
-    if (canScoreboard) scoreboardBtn.classList.remove('hidden');
-    else scoreboardBtn.classList.add('hidden');
-  }
-
-  if (featuredEditBtn) {
-    if (canScoreboard) featuredEditBtn.classList.remove('hidden');
-    else featuredEditBtn.classList.add('hidden');
-  }
-
-  if (adminManageBtn) {
-    if (isAdmin) adminManageBtn.classList.remove('hidden');
-    else adminManageBtn.classList.add('hidden');
-  }
-
-  if (parentDashBtn) {
-    if (isParent || isAdmin) parentDashBtn.classList.remove('hidden');
-    else parentDashBtn.classList.add('hidden');
-  }
-
-  if (backupBtn) {
-    if (isAdmin) backupBtn.classList.remove('hidden');
-    else backupBtn.classList.add('hidden');
-  }
+  if (teacherAddBtn) teacherAddBtn.classList.toggle('hidden', !canCreate);
+  if (scoreboardBtn) scoreboardBtn.classList.toggle('hidden', !canScoreboard);
+  if (featuredEditBtn) featuredEditBtn.classList.toggle('hidden', !StorageManager.hasPermission('edit_featured_media'));
+  if (adminManageBtn) adminManageBtn.classList.toggle('hidden', !canManageUsers);
+  if (userManageBtnLabel) userManageBtnLabel.textContent = manageLabel;
+  if (studentRecordsBtn) studentRecordsBtn.classList.toggle('hidden', !canOwnRecords);
+  if (parentDashBtn) parentDashBtn.classList.toggle('hidden', !canParentDash);
+  if (backupBtn) backupBtn.classList.toggle('hidden', !canBackup);
 }
 
 // ចូលប្រើប្រាស់ Login
@@ -417,29 +397,16 @@ function handleLoginSubmit(e) {
 
   const res = StorageManager.login(username, password);
   if (res.success) {
-    showToast(`សូមស្វាគមន៍! លោក ${res.user.name} (${res.user.roleNameKhmer})`, 'success');
+    showToast(`សូមស្វាគមន៍! ${res.user.name} (${res.user.roleNameKhmer})`, 'success');
+    form.reset();
     closeAllModals();
     renderUserNav();
-    renderCards();
+    renderSubjectFilters();
+    renderGradeFilter();
     renderStats();
+    renderCards();
   } else {
     alert(res.message);
-  }
-}
-
-// Quick 1-Click Login សម្រាប់សាកល្បង Roles
-function quickLogin(role) {
-  const users = StorageManager.getUsers();
-  const targetUser = users.find(u => u.role === role);
-  if (targetUser) {
-    StorageManager.setCurrentUser(targetUser);
-    showToast(`បានចូលប្រើជា៖ ${targetUser.name} (${targetUser.roleNameKhmer})`, 'success');
-    closeAllModals();
-    renderUserNav();
-    renderCards();
-    renderStats();
-  } else {
-    alert(`មិនទាន់មានគណនីតួនាទី ${role} នៅឡើយទេ`);
   }
 }
 
@@ -447,10 +414,13 @@ function handleLogout() {
   StorageManager.logout();
   showToast('បានចាកចេញពីគណនីដោយជោគជ័យ', 'info');
   renderUserNav();
+  renderSubjectFilters();
+  renderGradeFilter();
+  renderStats();
   renderCards();
 }
 
-// ចុះឈ្មោះ Register
+// ចុះឈ្មោះ Register (អនុញ្ញាតតែសិស្ស និងមាតាបិតា)
 function openRegisterModal() {
   closeAllModals();
   const modal = document.getElementById('registerModal');
@@ -469,28 +439,90 @@ function handleRegisterSubmit(e) {
     grade: form.regGrade.value,
     email: form.regEmail.value.trim(),
     phone: form.regPhone.value.trim(),
-    childName: form.regChildName ? form.regChildName.value.trim() : ''
+    childName: form.regChildName ? form.regChildName.value.trim() : '',
+    childGrade: form.regRole.value === 'parent' ? form.regGrade.value : ''
   };
 
-  const res = StorageManager.addUser(userData);
+  const res = StorageManager.addUser(userData, { isSelfRegister: true });
   if (res.success) {
-    // Auto login
     StorageManager.setCurrentUser(res.user);
-    showToast(`ចុះឈ្មោះបានជោគជ័យ! សូមស្វាគមន៍មកកាន់សាលា ហេមតុន`, 'success');
+    StorageManager.recordActivity('register', `ចុះឈ្មោះគណនីថ្មី (${res.user.roleNameKhmer})`);
+    showToast('ចុះឈ្មោះបានជោគជ័យ! សូមស្វាគមន៍មកកាន់សាលា ហេមតុន', 'success');
+    form.reset();
     closeAllModals();
     renderUserNav();
+    renderSubjectFilters();
+    renderGradeFilter();
+    renderStats();
     renderCards();
   } else {
     alert(res.message);
   }
 }
 
-// ================= ADMIN USER MANAGEMENT MODAL =================
+// ================= ROLE-SCOPED USER MANAGEMENT MODAL =================
+function toggleCreateUserParentField() {
+  const roleSelect = document.getElementById('adminNewRoleSelect');
+  const childWrap = document.getElementById('adminNewChildWrap');
+  if (!roleSelect || !childWrap) return;
+  childWrap.classList.toggle('hidden', roleSelect.value !== 'parent');
+}
+
 function openUserManagementModal() {
-  if (!StorageManager.hasPermission('manage_users')) {
-    alert('មានតែគណនី Admin ប៉ុណ្ណោះដែលមានសិទ្ធិគ្រប់គ្រងអ្នកប្រើប្រាស់!');
+  const currentUser = StorageManager.getCurrentUser();
+  if (!StorageManager.hasPermission('manage_users') && !StorageManager.hasPermission('manage_students')) {
+    alert('មានតែគណនី Admin, ប្រធានផ្នែក ឬគ្រូបង្រៀន ប៉ុណ្ណោះដែលអាចគ្រប់គ្រងគណនីបាន!');
     return;
   }
+
+  const subtitle = document.getElementById('userManageModalSubtitle');
+  const titleEl = document.getElementById('userManageModalTitle');
+  const formTitle = document.getElementById('userCreateFormTitle');
+  const roleSelect = document.getElementById('adminNewRoleSelect');
+  const gradeSelect = document.getElementById('adminNewGradeSelect');
+  const childSelect = document.getElementById('adminNewChildSelect');
+
+  if (currentUser.role === 'teacher') {
+    if (subtitle) subtitle.textContent = 'ផ្ទាំងគ្រូបង្រៀន (Teacher Student Manager)';
+    if (titleEl) titleEl.textContent = 'បង្កើត និងតាមដានគណនីកូនសិស្ស';
+    if (formTitle) formTitle.innerHTML = '<i class="fa-solid fa-user-plus text-blue-900"></i> <span>បង្កើតគណនីកូនសិស្ស ឬមាតាបិតា</span>';
+  } else if (currentUser.role === 'head') {
+    if (subtitle) subtitle.textContent = 'ផ្ទាំងប្រធានផ្នែក (Department Head)';
+    if (titleEl) titleEl.textContent = 'គ្រប់គ្រងលើគ្រូ សិស្ស និងមាតាបិតា';
+    if (formTitle) formTitle.innerHTML = '<i class="fa-solid fa-user-plus text-blue-900"></i> <span>បង្កើតគណនី គ្រូ / សិស្ស / មាតាបិតា</span>';
+  } else {
+    if (subtitle) subtitle.textContent = 'ផ្ទាំងគ្រប់គ្រងអភិបាល (Full System Admin)';
+    if (titleEl) titleEl.textContent = 'ការគ្រប់គ្រងអ្នកប្រើប្រាស់ និងសិទ្ធិទាំងអស់';
+    if (formTitle) formTitle.innerHTML = '<i class="fa-solid fa-user-plus text-blue-900"></i> <span>បង្កើតគណនីថ្មី (គ្រប់ Role)</span>';
+  }
+
+  if (roleSelect) {
+    const allowed = StorageManager.getManageableRoles(currentUser);
+    roleSelect.innerHTML = allowed.map(r => {
+      const meta = ROLE_META[r] || ROLE_META.student;
+      return `<option value="${r}">${escapeHtml(meta.name)}</option>`;
+    }).join('');
+  }
+
+  if (gradeSelect) {
+    let gHtml = `<option value="ទូទៅ">ទូទៅ (All)</option>`;
+    GRADE_GROUPS.forEach(group => {
+      gHtml += `<optgroup label="${escapeHtml(group.groupName)}">`;
+      group.grades.forEach(g => {
+        gHtml += `<option value="${escapeHtml(g)}" ${g === 'ថ្នាក់ទី១' ? 'selected' : ''}>${escapeHtml(g)}</option>`;
+      });
+      gHtml += `</optgroup>`;
+    });
+    gradeSelect.innerHTML = gHtml;
+  }
+
+  if (childSelect) {
+    const students = StorageManager.getUsers().filter(u => u.role === 'student');
+    childSelect.innerHTML = `<option value="">-- ជ្រើសរើសឈ្មោះសិស្ស --</option>` +
+      students.map(s => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.name)} (${escapeHtml(s.grade)})</option>`).join('');
+  }
+
+  toggleCreateUserParentField();
   renderUserManagementTable();
   const modal = document.getElementById('userManagementModal');
   if (modal) modal.classList.remove('hidden');
@@ -501,64 +533,79 @@ function renderUserManagementTable() {
   const countEl = document.getElementById('totalUsersCount');
   if (!container) return;
 
-  const users = StorageManager.getUsers();
+  const allUsers = StorageManager.getUsers();
   const currentUser = StorageManager.getCurrentUser();
+  const quizHistory = StorageManager.getQuizHistory();
+  const submissions = StorageManager.getSubmissions();
+
+  // កំណត់បញ្ជី User ដែលតួនាទីនីមួយៗអាចមើល និងគ្រប់គ្រងបាន
+  const users = allUsers.filter(u => {
+    if (!currentUser) return false;
+    if (currentUser.role === 'admin') return true;
+    if (currentUser.role === 'head') return ['teacher', 'student', 'parent'].includes(u.role) || u.id === currentUser.id;
+    if (currentUser.role === 'teacher') return ['student', 'parent'].includes(u.role);
+    return false;
+  });
 
   if (countEl) countEl.textContent = users.length;
 
-  const roleStyles = {
-    admin: 'bg-red-100 text-red-800 border-red-300',
-    teacher: 'bg-blue-100 text-blue-900 border-blue-300',
-    student: 'bg-emerald-100 text-emerald-900 border-emerald-300',
-    parent: 'bg-amber-100 text-amber-900 border-amber-300'
-  };
-
   container.innerHTML = users.map((u, idx) => {
     const isSelf = currentUser && currentUser.id === u.id;
+    const meta = ROLE_META[u.role] || ROLE_META.student;
+    const canManageThis = StorageManager.canManageUser(currentUser, u);
+    const quizCount = quizHistory.filter(q => q.userId === u.id).length;
+    const hwCount = submissions.filter(s => s.userId === u.id).length;
+    const studentStats = u.role === 'student'
+      ? `<div class="text-[11px] text-emerald-700 font-semibold mt-0.5">Quiz: ${quizCount} • កិច្ចការ: ${hwCount}</div>`
+      : '';
+
     return `
       <tr class="hover:bg-slate-50/80 transition text-xs sm:text-sm border-b border-slate-100">
         <td class="p-3 text-slate-500 font-mono text-center">${idx + 1}</td>
         <td class="p-3">
           <div class="flex items-center gap-2.5">
-            <div class="w-8 h-8 rounded-xl ${u.avatarBg || 'bg-blue-900'} text-white flex items-center justify-center text-xs flex-shrink-0">
-              <i class="fa-solid ${u.avatarIcon || 'fa-user'}"></i>
+            <div class="w-8 h-8 rounded-xl ${u.avatarBg || meta.bg} text-white flex items-center justify-center text-xs flex-shrink-0">
+              <i class="fa-solid ${u.avatarIcon || meta.icon}"></i>
             </div>
             <div>
-              <p class="font-bold text-slate-900">${u.name} ${isSelf ? '<span class="text-[10px] text-blue-600 font-normal">(ខ្លួនឯង)</span>' : ''}</p>
-              <p class="text-xs text-slate-400 font-mono">@${u.username} • ${u.phone || 'គ្មានលេខទូរស័ព្ទ'}</p>
+              <p class="font-bold text-slate-900">${escapeHtml(u.name)} ${isSelf ? '<span class="text-[10px] text-blue-600 font-normal">(ខ្លួនឯង)</span>' : ''}</p>
+              <p class="text-xs text-slate-400 font-mono">@${escapeHtml(u.username)} • ${escapeHtml(u.phone || 'គ្មានលេខទូរស័ព្ទ')}</p>
             </div>
           </div>
         </td>
         <td class="p-3">
-          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${roleStyles[u.role] || roleStyles.student}">
-            ${u.roleNameKhmer || u.role}
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${meta.badge}">
+            ${escapeHtml(meta.short)}
           </span>
         </td>
         <td class="p-3 font-medium text-slate-700">
-          ${u.grade || 'ទូទៅ'}
-          ${u.childName ? `<div class="text-[11px] text-amber-700">កូន៖ ${u.childName}</div>` : ''}
+          ${escapeHtml(u.grade || 'ទូទៅ')}
+          ${u.childName ? `<div class="text-[11px] text-amber-700">កូន៖ ${escapeHtml(u.childName)}</div>` : ''}
+          ${studentStats}
         </td>
         <td class="p-3 text-slate-400 text-xs hidden sm:table-cell">
-          ${u.createdAt || '2026-10-01'}
+          ${escapeHtml(u.createdAt || '2026-10-01')}
         </td>
         <td class="p-3 text-right">
           <div class="flex items-center justify-end gap-1.5">
-            <button 
-              onclick="editUserRole('${u.id}')" 
-              title="កែប្រែតួនាទី / Password" 
-              class="w-7 h-7 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-900 flex items-center justify-center transition"
-            >
-              <i class="fa-solid fa-user-pen text-xs"></i>
-            </button>
-            ${!isSelf ? `
+            ${canManageThis ? `
               <button 
-                onclick="confirmDeleteUser('${u.id}')" 
-                title="លុបអ្នកប្រើប្រាស់" 
-                class="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 flex items-center justify-center transition"
+                onclick="editUserRole('${u.id}')" 
+                title="កែប្រែថ្នាក់ / Role / Password" 
+                class="w-7 h-7 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-900 flex items-center justify-center transition"
               >
-                <i class="fa-solid fa-trash-can text-xs"></i>
+                <i class="fa-solid fa-user-pen text-xs"></i>
               </button>
-            ` : ''}
+              ${!isSelf ? `
+                <button 
+                  onclick="confirmDeleteUser('${u.id}')" 
+                  title="លុបអ្នកប្រើប្រាស់" 
+                  class="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 flex items-center justify-center transition"
+                >
+                  <i class="fa-solid fa-trash-can text-xs"></i>
+                </button>
+              ` : ''}
+            ` : '<span class="text-[11px] text-slate-400">-</span>'}
           </div>
         </td>
       </tr>
@@ -576,6 +623,7 @@ function handleAdminCreateUser(e) {
     password: form.adminNewPassword.value,
     role: form.adminNewRole.value,
     grade: form.adminNewGrade.value,
+    childId: form.adminNewChildId ? form.adminNewChildId.value : '',
     email: form.adminNewEmail.value.trim(),
     phone: form.adminNewPhone.value.trim()
   };
@@ -584,6 +632,7 @@ function handleAdminCreateUser(e) {
   if (res.success) {
     showToast(`បានបង្កើតគណនី ${userData.name} ដោយជោគជ័យ!`, 'success');
     form.reset();
+    toggleCreateUserParentField();
     renderUserManagementTable();
   } else {
     alert(res.message);
@@ -591,22 +640,37 @@ function handleAdminCreateUser(e) {
 }
 
 function editUserRole(userId) {
+  const currentUser = StorageManager.getCurrentUser();
   const users = StorageManager.getUsers();
   const user = users.find(u => u.id === userId);
   if (!user) return;
 
-  const newRole = prompt(`កែប្រែតួនាទីសម្រាប់ ${user.name}:\n(admin, teacher, student, parent)\nបច្ចុប្បន្ន៖ ${user.role}`, user.role);
-  if (!newRole) return;
-
-  const validRoles = ['admin', 'teacher', 'student', 'parent'];
-  if (!validRoles.includes(newRole.toLowerCase().trim())) {
-    alert('តួនាទីមិនត្រឹមត្រូវ! ត្រូវតែជា admin, teacher, student ឬ parent។');
+  if (!StorageManager.canManageUser(currentUser, user)) {
+    alert('អ្នកមិនមានសិទ្ធិកែប្រែគណនីនេះទេ!');
     return;
   }
 
-  const res = StorageManager.updateUser(userId, { role: newRole.toLowerCase().trim() });
+  const allowedRoles = StorageManager.getManageableRoles(currentUser);
+  const newRole = prompt(`កែប្រែតួនាទីសម្រាប់ ${user.name}:\n(${allowedRoles.join(', ')})\nបច្ចុប្បន្ន៖ ${user.role}`, user.role);
+  if (newRole === null) return;
+  const cleanRole = newRole.toLowerCase().trim();
+  if (!allowedRoles.includes(cleanRole)) {
+    alert(`តួនាទីមិនត្រឹមត្រូវ! អ្នកអាចកំណត់បានតែ៖ ${allowedRoles.join(', ')}`);
+    return;
+  }
+
+  const newGrade = prompt(`កែប្រែកម្រិតថ្នាក់សម្រាប់ ${user.name}:`, user.grade || 'ថ្នាក់ទី១');
+  if (newGrade === null) return;
+
+  const newPass = prompt(`ប្តូរពាក្យសម្ងាត់ថ្មីសម្រាប់ ${user.name} (ទុកទទេបើមិនប្តូរ):`, '');
+  const updates = { role: cleanRole, grade: newGrade.trim() || user.grade };
+  if (newPass && newPass.trim()) {
+    updates.password = newPass.trim();
+  }
+
+  const res = StorageManager.updateUser(userId, updates);
   if (res.success) {
-    showToast(`បានកែប្រែតួនាទីជា ${newRole} រួចរាល់!`, 'success');
+    showToast(`បានកែប្រែគណនី ${user.name} រួចរាល់!`, 'success');
     renderUserManagementTable();
     renderUserNav();
     renderCards();
@@ -632,22 +696,48 @@ function confirmDeleteUser(userId) {
   }
 }
 
-// ================= PARENT DASHBOARD MODAL =================
-function openParentModal() {
+// ================= PARENT DASHBOARD MODAL (CHILD-SCOPED) =================
+function openParentModal(selectedChildId = null) {
   const currentUser = StorageManager.getCurrentUser();
+  if (!StorageManager.hasPermission('view_parent_dashboard')) {
+    alert('មានតែគណនី មាតាបិតា, ប្រធានផ្នែក ឬ Admin ប៉ុណ្ណោះដែលអាចបើកផ្ទាំងនេះបាន!');
+    return;
+  }
+
   const modal = document.getElementById('parentModal');
   const content = document.getElementById('parentModalContent');
   if (!modal || !content) return;
 
-  const quizResults = StorageManager.getQuizResults();
-  const completedEntries = Object.entries(quizResults);
-  const items = StorageManager.getItems();
+  const allStudents = StorageManager.getUsers().filter(u => u.role === 'student');
+  let child = null;
+  if ((currentUser.role === 'admin' || currentUser.role === 'head') && allStudents.length > 0) {
+    child = (selectedChildId && allStudents.find(s => s.id === selectedChildId)) || allStudents[0];
+  } else {
+    child = StorageManager.getParentChild(currentUser);
+  }
 
-  const childName = (currentUser && currentUser.childName) ? currentUser.childName : 'សិស្ស សុខ ពិសិដ្ឋ';
-  const childGrade = (currentUser && currentUser.childGrade) ? currentUser.childGrade : 'ថ្នាក់ទី១';
+  const childId = child ? child.id : '';
+  const childName = child ? child.name : 'សិស្ស';
+  const childGrade = child ? child.grade : 'ថ្នាក់ទី១';
+
+  const quizHistory = StorageManager.getQuizHistory().filter(
+    rec => (childId && rec.userId === childId) || (rec.userName && rec.userName === childName)
+  );
+  const submissions = StorageManager.getSubmissions().filter(
+    sub => (childId && sub.userId === childId) || (sub.userName && sub.userName === childName)
+  );
+  const childLogs = childId ? StorageManager.getActivityLogs({ userId: childId }).slice(0, 15) : [];
+
+  const studentSelectorHtml = (currentUser.role === 'admin' || currentUser.role === 'head') && allStudents.length > 0
+    ? `<div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+         <span class="font-bold text-slate-700"><i class="fa-solid fa-user-graduate mr-1 text-emerald-700"></i> ជ្រើសរើសសិស្សដើម្បីពិនិត្យព័ត៌មាន៖</span>
+         <select onchange="openParentModal(this.value)" class="px-3 py-1.5 rounded-xl border border-slate-300 bg-white font-semibold text-slate-800">
+           ${allStudents.map(s => `<option value="${escapeHtml(s.id)}" ${s.id === childId ? 'selected' : ''}>${escapeHtml(s.name)} (${escapeHtml(s.grade)})</option>`).join('')}
+         </select>
+       </div>`
+    : '';
 
   content.innerHTML = `
-    <!-- Modal Header -->
     <div class="p-6 border-b border-slate-200 bg-gradient-to-r from-amber-50 to-orange-50 sticky top-0 z-10 flex items-center justify-between">
       <div class="flex items-center gap-3">
         <div class="w-12 h-12 rounded-2xl bg-amber-600 text-white flex items-center justify-center text-xl shadow-md">
@@ -655,7 +745,7 @@ function openParentModal() {
         </div>
         <div>
           <span class="text-xs font-bold uppercase tracking-wider text-amber-800">ផ្ទាំងព័ត៌មានមាតាបិតា (Parent Portal)</span>
-          <h3 class="text-lg sm:text-xl font-black text-slate-900">តាមដានការរៀនសូត្ររបស់កូន</h3>
+          <h3 class="text-lg sm:text-xl font-black text-slate-900">តាមដានព័ត៌មាន និងការសិក្សារបស់កូន</h3>
         </div>
       </div>
       <button onclick="closeAllModals()" class="w-9 h-9 rounded-xl bg-white hover:bg-slate-100 text-slate-600 flex items-center justify-center transition border border-slate-200">
@@ -663,54 +753,54 @@ function openParentModal() {
       </button>
     </div>
 
-    <!-- Modal Body -->
     <div class="p-6 md:p-8 space-y-6 max-h-[75vh] overflow-y-auto">
-      <!-- Child Info Card -->
+      ${studentSelectorHtml}
+
       <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div class="flex items-center gap-3.5">
           <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-lg">
             <i class="fa-solid fa-child"></i>
           </div>
           <div>
-            <h4 class="font-bold text-slate-900 text-base">${childName}</h4>
-            <p class="text-xs text-slate-500 font-medium">កម្រិតថ្នាក់៖ <strong class="text-blue-900">${childGrade}</strong> • សាលាអន្តរជាតិ ហេមតុន</p>
+            <h4 class="font-bold text-slate-900 text-base">${escapeHtml(childName)}</h4>
+            <p class="text-xs text-slate-500 font-medium">កម្រិតថ្នាក់៖ <strong class="text-blue-900">${escapeHtml(childGrade)}</strong> • សាលាអន្តរជាតិ ហេមតុន</p>
           </div>
         </div>
 
-        <div class="flex items-center gap-4 text-center">
+        <div class="flex items-center gap-3 text-center">
           <div class="px-3 py-1.5 rounded-xl bg-blue-50 border border-blue-100">
-            <span class="block text-lg font-black text-blue-900">${completedEntries.length}</span>
-            <span class="text-[10px] text-slate-500 font-medium">លំហាត់អនុវត្ត</span>
+            <span class="block text-lg font-black text-blue-900">${quizHistory.length}</span>
+            <span class="text-[10px] text-slate-500 font-medium">លំហាត់ Quiz</span>
+          </div>
+          <div class="px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-100">
+            <span class="block text-lg font-black text-indigo-800">${submissions.length}</span>
+            <span class="text-[10px] text-slate-500 font-medium">កិច្ចការផ្ទះ</span>
           </div>
           <div class="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-100">
-            <span class="block text-lg font-black text-emerald-700">ល្អប្រសើរ</span>
-            <span class="text-[10px] text-slate-500 font-medium">ស្ថានភាពរៀន</span>
+            <span class="block text-lg font-black text-emerald-700">${childLogs.length}</span>
+            <span class="text-[10px] text-slate-500 font-medium">កំណត់ត្រាសិក្សា</span>
           </div>
         </div>
       </div>
 
-      <!-- Quizzes Completed by Child -->
       <div>
         <h4 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-          <i class="fa-solid fa-clock-rotate-left text-amber-600"></i>
-          ប្រវត្តិលំហាត់ដែលកូនបានអនុវត្តរួចរាល់
+          <i class="fa-solid fa-pen-nib text-amber-600"></i>
+          លទ្ធផលលំហាត់ Quiz &amp; ប្រឡងរបស់កូន
         </h4>
-
-        ${completedEntries.length === 0 ? `
-          <div class="text-center py-8 bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-xs">
-            កូនរបស់អ្នកមិនទាន់បានធ្វើលំហាត់ណាមួយនៅឡើយទេ! សូមលើកទឹកចិត្តឱ្យកូនសាកល្បងធ្វើលំហាត់ក្នុងគេហទំព័រ។
+        ${quizHistory.length === 0 ? `
+          <div class="text-center py-6 bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-xs">
+            កូនរបស់អ្នកមិនទាន់មានកំណត់ត្រាធ្វើលំហាត់នៅឡើយទេ។
           </div>
         ` : `
-          <div class="space-y-2.5">
-            ${completedEntries.map(([itemId, res]) => {
-              const item = items.find(i => i.id === itemId);
-              const title = item ? item.title : 'លំហាត់អនុវត្ត';
+          <div class="space-y-2">
+            ${quizHistory.map(res => {
               const percent = res.percentage || 0;
               return `
                 <div class="p-3.5 rounded-xl bg-white border border-slate-200 flex items-center justify-between text-xs sm:text-sm">
                   <div class="truncate pr-3">
-                    <p class="font-bold text-slate-900 truncate">${title}</p>
-                    <span class="text-[11px] text-slate-400">${item ? item.grade : ''} • កាលបរិច្ឆេទ៖ ${res.completedAt ? res.completedAt.split('T')[0] : 'ថ្មីៗ'}</span>
+                    <p class="font-bold text-slate-900 truncate">${escapeHtml(res.itemTitle || 'លំហាត់អនុវត្ត')}</p>
+                    <span class="text-[11px] text-slate-400">${escapeHtml(res.itemGrade || '')} • ${res.completedAt ? res.completedAt.split('T')[0] : ''}</span>
                   </div>
                   <div class="flex items-center gap-2 flex-shrink-0">
                     <span class="font-black text-slate-800">${res.score}/${res.total}</span>
@@ -725,17 +815,151 @@ function openParentModal() {
         `}
       </div>
 
-      <!-- Advice for Parents -->
-      <div class="p-4 rounded-2xl bg-amber-50/70 border border-amber-200 text-xs text-amber-900 leading-relaxed">
-        <p class="font-bold flex items-center gap-1.5 mb-1 text-sm">
-          <i class="fa-solid fa-lightbulb text-amber-600"></i>
-          គន្លឹះជួយកូនរៀននៅផ្ទះពីសាលា ហេមតុន៖
-        </p>
-        <ul class="list-disc list-inside space-y-1">
-          <li>ចំណាយពេល ២០ នាទីក្នុងមួយថ្ងៃដើម្បីមើលវីដេអូបង្រៀនជាមួយកូន។</li>
-          <li>សាកល្បងឱ្យកូនធ្វើកម្រងលំហាត់ (Quiz) ហើយលើកទឹកចិត្តកូនពេលឆ្លើយត្រូវ។</li>
-          <li>ទាញយកសន្លឹកកិច្ចការ PDF មកឱ្យកូនហាត់សរសេរដៃផ្ទាល់។</li>
-        </ul>
+      <div>
+        <h4 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+          <i class="fa-solid fa-file-signature text-indigo-700"></i>
+          កិច្ចការផ្ទះ និងពិន្ទុពីលោកគ្រូ-អ្នកគ្រូ
+        </h4>
+        ${submissions.length === 0 ? `
+          <div class="text-center py-6 bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-xs">
+            មិនទាន់មានការប្រគល់កិច្ចការផ្ទះរបស់កូននៅឡើយទេ។
+          </div>
+        ` : `
+          <div class="space-y-2">
+            ${submissions.map(sub => `
+              <div class="p-3.5 rounded-xl bg-white border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <div class="min-w-0">
+                  <p class="font-bold text-slate-900">${escapeHtml(sub.itemTitle)}</p>
+                  <p class="text-slate-600">${escapeHtml(sub.note)}</p>
+                  ${sub.feedback ? `<p class="text-emerald-800 mt-0.5"><i class="fa-solid fa-comment-dots mr-1"></i> មតិគ្រូ៖ ${escapeHtml(sub.feedback)}</p>` : ''}
+                </div>
+                <div class="flex-shrink-0">
+                  ${sub.status === 'graded'
+                    ? `<span class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold">ពិន្ទុ៖ ${sub.score}/${sub.maxScore}</span>`
+                    : `<span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 font-bold">រង់ចាំគ្រូដាក់ពិន្ទុ</span>`
+                  }
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `}
+      </div>
+
+      <div>
+        <h4 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+          <i class="fa-solid fa-clock-rotate-left text-emerald-600"></i>
+          កំណត់ត្រាសកម្មភាពសិក្សារបស់កូន (System Record)
+        </h4>
+        ${childLogs.length === 0 ? `
+          <div class="text-center py-6 bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-xs">
+            មិនទាន់មានកំណត់ត្រាសកម្មភាពចូលរៀនរបស់កូននៅឡើយទេ។
+          </div>
+        ` : `
+          <div class="space-y-1.5">
+            ${childLogs.map(log => `
+              <div class="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+                <span class="text-slate-700 font-medium truncate pr-2">${escapeHtml(log.details)}</span>
+                <span class="text-[11px] text-slate-400 flex-shrink-0 font-mono">${escapeHtml((log.timestamp || '').replace('T', ' ').slice(0, 16))}</span>
+              </div>
+            `).join('')}
+          </div>
+        `}
+      </div>
+    </div>
+  `;
+
+  modal.classList.remove('hidden');
+}
+
+// ================= STUDENT MY RECORDS MODAL =================
+function openStudentRecordsModal() {
+  const currentUser = StorageManager.getCurrentUser();
+  if (!currentUser || !StorageManager.hasPermission('view_own_records')) {
+    alert('ផ្ទាំងនេះសម្រាប់គណនីសិស្សានុសិស្ស!');
+    return;
+  }
+
+  const modal = document.getElementById('studentRecordsModal');
+  const content = document.getElementById('studentRecordsModalContent');
+  if (!modal || !content) return;
+
+  const myQuizzes = StorageManager.getQuizHistory().filter(r => r.userId === currentUser.id);
+  const mySubmissions = StorageManager.getSubmissions().filter(s => s.userId === currentUser.id);
+  const myLogs = StorageManager.getActivityLogs({ userId: currentUser.id }).slice(0, 20);
+
+  content.innerHTML = `
+    <div class="p-6 border-b border-slate-200 bg-gradient-to-r from-emerald-50 to-teal-50 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-lg shadow-sm">
+          <i class="fa-solid fa-clipboard-check"></i>
+        </div>
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-emerald-800">កំណត់ត្រាសិក្សារបស់សិស្ស</span>
+          <h3 class="text-lg font-black text-slate-900">${escapeHtml(currentUser.name)} • ${escapeHtml(currentUser.grade)}</h3>
+        </div>
+      </div>
+      <button onclick="closeAllModals()" class="w-9 h-9 rounded-xl bg-white hover:bg-slate-100 text-slate-600 flex items-center justify-center border border-slate-200">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="p-6 overflow-y-auto flex-1 space-y-6">
+      <div class="grid grid-cols-3 gap-3 text-center">
+        <div class="p-3 rounded-2xl bg-blue-50 border border-blue-100">
+          <span class="block text-xl font-black text-blue-900">${myQuizzes.length}</span>
+          <span class="text-xs text-slate-600">លំហាត់ Quiz</span>
+        </div>
+        <div class="p-3 rounded-2xl bg-indigo-50 border border-indigo-100">
+          <span class="block text-xl font-black text-indigo-800">${mySubmissions.length}</span>
+          <span class="text-xs text-slate-600">កិច្ចការផ្ទះបានផ្ញើ</span>
+        </div>
+        <div class="p-3 rounded-2xl bg-emerald-50 border border-emerald-100">
+          <span class="block text-xl font-black text-emerald-700">${myLogs.length}</span>
+          <span class="text-xs text-slate-600">សកម្មភាពកត់ត្រា</span>
+        </div>
+      </div>
+
+      <div>
+        <h4 class="text-sm font-bold text-slate-800 mb-2">ពិន្ទុលំហាត់ &amp; កិច្ចការផ្ទះរបស់ខ្ញុំ</h4>
+        ${(myQuizzes.length === 0 && mySubmissions.length === 0) ? `
+          <div class="p-6 text-center rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-500">អ្នកមិនទាន់បានធ្វើលំហាត់ ឬផ្ញើកិច្ចការផ្ទះនៅឡើយទេ។</div>
+        ` : `
+          <div class="space-y-2">
+            ${myQuizzes.map(q => `
+              <div class="p-3 rounded-xl bg-white border border-slate-200 flex items-center justify-between text-xs">
+                <span class="font-bold text-slate-800 truncate pr-2">Quiz: ${escapeHtml(q.itemTitle)}</span>
+                <span class="px-2.5 py-1 rounded-full bg-blue-100 text-blue-900 font-bold flex-shrink-0">${q.score}/${q.total} (${q.percentage}%)</span>
+              </div>
+            `).join('')}
+            ${mySubmissions.map(s => `
+              <div class="p-3 rounded-xl bg-white border border-slate-200 flex items-center justify-between text-xs">
+                <div class="min-w-0 pr-2">
+                  <span class="font-bold text-indigo-900 block truncate">កិច្ចការផ្ទះ: ${escapeHtml(s.itemTitle)}</span>
+                  ${s.feedback ? `<span class="text-emerald-700">មតិគ្រូ៖ ${escapeHtml(s.feedback)}</span>` : ''}
+                </div>
+                <span class="px-2.5 py-1 rounded-full font-bold flex-shrink-0 ${s.status === 'graded' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                  ${s.status === 'graded' ? `${s.score}/${s.maxScore}` : 'រង់ចាំគ្រូដាក់ពិន្ទុ'}
+                </span>
+              </div>
+            `).join('')}
+          </div>
+        `}
+      </div>
+
+      <div>
+        <h4 class="text-sm font-bold text-slate-800 mb-2">ប្រវត្តិសកម្មភាពដែលប្រព័ន្ធបានកត់ត្រា (System Record)</h4>
+        ${myLogs.length === 0 ? `
+          <div class="p-4 text-center rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-500">មិនទាន់មានកំណត់ត្រាសកម្មភាពនៅឡើយទេ។</div>
+        ` : `
+          <div class="space-y-1.5">
+            ${myLogs.map(log => `
+              <div class="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+                <span class="text-slate-700 truncate pr-2">${escapeHtml(log.details)}</span>
+                <span class="text-[11px] text-slate-400 font-mono flex-shrink-0">${escapeHtml((log.timestamp || '').replace('T', ' ').slice(0, 16))}</span>
+              </div>
+            `).join('')}
+          </div>
+        `}
       </div>
     </div>
   `;
@@ -776,7 +1000,11 @@ function renderSubjectFilters() {
   const container = document.getElementById('subjectFilters');
   if (!container) return;
 
-  const items = StorageManager.getItems();
+  const currentUser = StorageManager.getCurrentUser();
+  let items = StorageManager.getItems();
+  if (currentUser) {
+    items = items.filter(i => StorageManager.canUserAccessItem(currentUser, i));
+  }
 
   container.innerHTML = INITIAL_SUBJECTS.map(subj => {
     const isActive = state.selectedSubject === subj.id;
@@ -807,6 +1035,22 @@ function renderGradeFilter() {
   const select = document.getElementById('gradeSelect');
   if (!select) return;
 
+  const currentUser = StorageManager.getCurrentUser();
+  if (currentUser && currentUser.role === 'student') {
+    select.innerHTML = `<option value="all">ថ្នាក់របស់ខ្ញុំ៖ ${escapeHtml(currentUser.grade)} (+ គ្រូ Assign)</option>`;
+    state.selectedGrade = 'all';
+    select.disabled = true;
+    return;
+  }
+  if (currentUser && currentUser.role === 'parent') {
+    const child = StorageManager.getParentChild(currentUser);
+    select.innerHTML = `<option value="all">ថ្នាក់របស់កូន៖ ${escapeHtml(child?.grade || currentUser.grade)}</option>`;
+    state.selectedGrade = 'all';
+    select.disabled = true;
+    return;
+  }
+
+  select.disabled = false;
   let html = `<option value="all">គ្រប់កម្រិតថ្នាក់ទាំងអស់ (All Grades)</option>`;
 
   GRADE_GROUPS.forEach(group => {
@@ -839,12 +1083,25 @@ function populateTeacherGradeSelect(selectedGrade = '') {
 }
 
 function renderStats() {
-  const items = StorageManager.getItems();
+  const currentUser = StorageManager.getCurrentUser();
+  let items = StorageManager.getItems();
+  if (currentUser) {
+    items = items.filter(i => StorageManager.canUserAccessItem(currentUser, i));
+  }
   const lessonsCount = items.filter(i => i.type === 'lesson').length;
-  const exercisesCount = items.filter(i => i.type === 'exercise').length;
+  const exercisesCount = items.filter(i => i.type === 'exercise' || i.type === 'homework').length;
   const videosCount = items.filter(i => i.videoUrl && i.videoUrl.trim() !== '').length;
-  const quizResults = StorageManager.getQuizResults();
-  const completedCount = Object.keys(quizResults).length;
+
+  let completedCount = 0;
+  if (currentUser && currentUser.role === 'student') {
+    completedCount = StorageManager.getQuizHistory().filter(q => q.userId === currentUser.id).length +
+      StorageManager.getSubmissions().filter(s => s.userId === currentUser.id).length;
+  } else if (currentUser && currentUser.role === 'parent') {
+    const child = StorageManager.getParentChild(currentUser);
+    completedCount = StorageManager.getQuizHistory().filter(q => child && q.userId === child.id).length;
+  } else {
+    completedCount = StorageManager.getQuizHistory().length + StorageManager.getSubmissions().length;
+  }
 
   const elTotal = document.getElementById('statTotalLessons');
   const elExercises = document.getElementById('statTotalExercises');
@@ -858,7 +1115,10 @@ function renderStats() {
 }
 
 function getFilteredItems() {
-  let items = StorageManager.getItems();
+  const currentUser = StorageManager.getCurrentUser();
+  if (!currentUser) return [];
+
+  let items = StorageManager.getItems().filter(i => StorageManager.canUserAccessItem(currentUser, i));
   const bookmarks = StorageManager.getBookmarks();
 
   if (state.selectedProgram !== 'all') {
@@ -913,10 +1173,34 @@ function renderCards() {
   const emptyState = document.getElementById('emptyState');
   if (!container) return;
 
-  const items = getFilteredItems();
   const currentUser = StorageManager.getCurrentUser();
-  const canEditAny = currentUser && currentUser.role === 'admin';
-  const canEditTeacher = currentUser && currentUser.role === 'teacher';
+  if (!currentUser) {
+    if (emptyState) emptyState.classList.add('hidden');
+    container.innerHTML = `
+      <div class="col-span-full bg-white rounded-3xl border border-slate-200 shadow-sm p-8 text-center max-w-2xl mx-auto">
+        <div class="w-16 h-16 mx-auto rounded-2xl bg-blue-50 text-blue-900 flex items-center justify-center text-2xl mb-4">
+          <i class="fa-solid fa-lock"></i>
+        </div>
+        <h3 class="text-xl font-black text-slate-900 mb-2">សូមចូលប្រព័ន្ធ (Login) ដើម្បីចូលរៀនតាមតួនាទីរបស់អ្នក</h3>
+        <p class="text-xs sm:text-sm text-slate-500 leading-relaxed mb-5">
+          ប្រព័ន្ធកំណត់សិទ្ធិច្បាស់លាស់៖ <strong>សិស្ស</strong> មើលមេរៀន និងធ្វើលំហាត់តែថ្នាក់ដែលគ្រូ Assign • <strong>មាតាបិតា</strong> តាមដានព័ត៌មានកូន • <strong>គ្រូ</strong> បង្កើតសិស្ស និងមេរៀន • <strong>ប្រធានផ្នែក</strong> គ្រប់គ្រងគ្រូ សិស្ស និងមាតាបិតា • <strong>Admin</strong> គ្រប់គ្រងប្រព័ន្ធទាំងមូល។
+        </p>
+        <div class="flex flex-wrap items-center justify-center gap-3">
+          <button onclick="openLoginModal()" class="px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs sm:text-sm font-bold shadow-md transition flex items-center gap-2">
+            <i class="fa-solid fa-arrow-right-to-bracket"></i>
+            <span>ចូលប្រព័ន្ធ (Login)</span>
+          </button>
+          <button onclick="openRegisterModal()" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold shadow-sm transition flex items-center gap-2">
+            <i class="fa-solid fa-user-plus"></i>
+            <span>ចុះឈ្មោះសិស្ស / មាតាបិតា</span>
+          </button>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  const items = getFilteredItems();
 
   if (items.length === 0) {
     container.innerHTML = '';
@@ -935,6 +1219,7 @@ function renderCards() {
     const hasAttachments = item.attachments && item.attachments.length > 0;
     const isExercise = item.type === 'exercise';
     const isHomework = item.type === 'homework';
+    const isAssignedDirectly = currentUser.role === 'student' && Array.isArray(item.assignedStudentIds) && item.assignedStudentIds.includes(currentUser.id);
     const typeMeta = isHomework
       ? { color: 'text-purple-800', icon: 'fa-file-signature', label: 'កិច្ចការផ្ទះ' }
       : isExercise
@@ -942,7 +1227,7 @@ function renderCards() {
         : { color: 'text-blue-900', icon: 'fa-book-open', label: 'មេរៀនទ្រឹស្តី' };
 
     // សិទ្ធិកែប្រែ ឬលុប
-    const canManageThis = canEditAny || (canEditTeacher && (!item.createdById || item.createdById === currentUser.id || item.teacher === currentUser.name));
+    const canManageThis = StorageManager.hasPermission('edit_lesson', item);
 
     return `
       <div class="card-hover bg-white rounded-2xl border border-slate-200/90 overflow-hidden flex flex-col justify-between group shadow-xs hover:shadow-md transition-all">
@@ -954,8 +1239,9 @@ function renderCards() {
                 ${subj.name}
               </span>
               <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
-                ${item.grade}
+                ${escapeHtml(item.grade)}
               </span>
+              ${isAssignedDirectly ? `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-800 border border-indigo-200">គ្រូ Assign ផ្ទាល់</span>` : ''}
             </div>
 
             <div class="flex items-center gap-1">
@@ -1121,8 +1407,20 @@ function openDetailModal(id) {
   const item = StorageManager.getItemById(id);
   if (!item) return;
 
+  const currentUser = StorageManager.getCurrentUser();
+  if (!currentUser) {
+    openLoginModal();
+    showToast('សូមចូលប្រព័ន្ធ (Login) ជាមុនសិន!', 'info');
+    return;
+  }
+  if (!StorageManager.hasPermission('access_item', item)) {
+    alert('អ្នកមានសិទ្ធិចូលមើលមេរៀន និងលំហាត់តែក្នុងថ្នាក់របស់អ្នក ឬមេរៀនដែលគ្រូបាន Assign ឱ្យប៉ុណ្ណោះ!');
+    return;
+  }
+
   state.activeItem = item;
   StorageManager.incrementViews(id);
+  StorageManager.recordActivity('view_lesson', `ចូលមើលមេរៀន/លំហាត់៖ ${item.title}`, item);
 
   const modal = document.getElementById('detailModal');
   const modalContent = document.getElementById('detailModalContent');
@@ -1211,10 +1509,9 @@ function openDetailModal(id) {
   }
 
   // ផ្នែកប្រគល់កិច្ចការផ្ទះ (Homework Submission) និងមើលពិន្ទុ
-  const currentUser = StorageManager.getCurrentUser();
   const itemSubmissions = StorageManager.getSubmissions(item.id);
   const mySubmissions = currentUser ? itemSubmissions.filter(s => s.userId === currentUser.id) : [];
-  const isTeacherOrAdmin = currentUser && (currentUser.role === 'teacher' || currentUser.role === 'admin');
+  const isTeacherOrAdmin = StorageManager.hasPermission('grade_homework');
   const showHomeworkSection = item.type === 'homework' || item.type === 'exercise';
 
   const homeworkHtml = showHomeworkSection ? `
@@ -1386,9 +1683,20 @@ function openDetailModal(id) {
 // QUIZ MODAL
 function openQuizModal(id, event) {
   if (event) event.stopPropagation();
+  const currentUser = StorageManager.getCurrentUser();
+  if (!currentUser) {
+    openLoginModal();
+    showToast('សូមចូលប្រព័ន្ធ (Login) ជាមុនសិន!', 'info');
+    return;
+  }
+
   const item = StorageManager.getItemById(id);
   if (!item || !item.questions || item.questions.length === 0) {
     alert('មេរៀននេះមិនទាន់មានសំណួរអនុវត្តនៅឡើយទេ!');
+    return;
+  }
+  if (!StorageManager.hasPermission('take_quiz', item)) {
+    alert('អ្នកមានសិទ្ធិធ្វើលំហាត់តែក្នុងថ្នាក់របស់អ្នក ឬលំហាត់ដែលគ្រូបាន Assign ឱ្យប៉ុណ្ណោះ!');
     return;
   }
 
@@ -1599,9 +1907,27 @@ function retryQuiz() {
 }
 
 // TEACHER ADD / EDIT MODAL
+function renderAssignStudentsCheckboxes(selectedIds = []) {
+  const container = document.getElementById('assignStudentsCheckboxes');
+  if (!container) return;
+  const students = StorageManager.getUsers().filter(u => u.role === 'student');
+  if (students.length === 0) {
+    container.innerHTML = '<span class="text-xs text-slate-500">មិនទាន់មានគណនីសិស្សនៅឡើយទេ</span>';
+    return;
+  }
+  const selectedSet = new Set(selectedIds || []);
+  container.innerHTML = students.map(s => `
+    <label class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-indigo-200 text-xs cursor-pointer hover:bg-indigo-50 transition">
+      <input type="checkbox" name="assignStudentIds" value="${escapeHtml(s.id)}" ${selectedSet.has(s.id) ? 'checked' : ''} class="rounded text-indigo-700 focus:ring-indigo-600" />
+      <span class="font-semibold text-slate-800">${escapeHtml(s.name)}</span>
+      <span class="text-[10px] text-slate-400">(${escapeHtml(s.grade)})</span>
+    </label>
+  `).join('');
+}
+
 function openAddModal() {
   if (!StorageManager.hasPermission('create_lesson')) {
-    alert('មានតែគណនីគ្រូបង្រៀន ឬ Admin ប៉ុណ្ណោះដែលមានសិទ្ធិបន្ថែមមេរៀន/លំហាត់!');
+    alert('មានតែគណនីគ្រូបង្រៀន ប្រធានផ្នែក ឬ Admin ប៉ុណ្ណោះដែលមានសិទ្ធិបន្ថែមមេរៀន/លំហាត់!');
     return;
   }
 
@@ -1620,6 +1946,7 @@ function openAddModal() {
   }
 
   populateTeacherGradeSelect('ថ្នាក់ទី១');
+  renderAssignStudentsCheckboxes([]);
   renderQuestionBuilder([]);
 
   modal.classList.remove('hidden');
@@ -1659,6 +1986,7 @@ function openEditModal(id, event) {
   }
   form.itemContent.value = item.content || '';
 
+  renderAssignStudentsCheckboxes(item.assignedStudentIds || []);
   renderQuestionBuilder(item.questions || []);
 
   modal.classList.remove('hidden');
@@ -1813,6 +2141,9 @@ function handleItemFormSubmit(e) {
       }]
     : [];
 
+  const assignedStudentIds = Array.from(document.querySelectorAll('#assignStudentsCheckboxes input[name="assignStudentIds"]:checked'))
+    .map(cb => cb.value);
+
   const itemData = {
     type: form.itemType.value,
     title: form.itemTitle.value.trim(),
@@ -1824,15 +2155,18 @@ function handleItemFormSubmit(e) {
     summary: form.itemSummary.value.trim(),
     videoUrl: parsedVid ? parsedVid.src : form.itemVideoUrl.value.trim(),
     content: form.itemContent.value.trim(),
+    assignedStudentIds,
     attachments,
     questions: questions
   };
 
   if (state.editingItemId) {
-    StorageManager.updateItem(state.editingItemId, itemData);
+    const updated = StorageManager.updateItem(state.editingItemId, itemData);
+    StorageManager.recordActivity('edit_lesson', `កែសម្រួលមេរៀន៖ ${itemData.title}`, updated);
     showToast('បានកែសម្រួលមេរៀនដោយជោគជ័យ!', 'success');
   } else {
-    StorageManager.addItem(itemData);
+    const created = StorageManager.addItem(itemData);
+    StorageManager.recordActivity('create_lesson', `បង្កើតមេរៀនថ្មី (${selectedGrade})៖ ${itemData.title}`, created);
     showToast('បានបន្ថែមមេរៀនថ្មីដោយជោគជ័យ!', 'success');
   }
 
@@ -1880,7 +2214,7 @@ function handleHomeworkSubmit(e, itemId) {
 
 function openScoreboardModal(activeTab = 'quizzes') {
   if (!StorageManager.hasPermission('view_scoreboard')) {
-    alert('មានតែគណនីគ្រូបង្រៀន ឬ Admin ប៉ុណ្ណោះដែលអាចមើលតារាងស្រង់ពិន្ទុបាន!');
+    alert('មានតែគណនីគ្រូបង្រៀន ប្រធានផ្នែក ឬ Admin ប៉ុណ្ណោះដែលអាចមើលតារាងស្រង់ពិន្ទុបាន!');
     return;
   }
 
@@ -1888,8 +2222,37 @@ function openScoreboardModal(activeTab = 'quizzes') {
   const content = document.getElementById('scoreboardModalContent');
   if (!modal || !content) return;
 
+  const currentUser = StorageManager.getCurrentUser();
   const quizHistory = StorageManager.getQuizHistory();
   const submissions = StorageManager.getSubmissions();
+  const activityLogs = StorageManager.getActivityLogs();
+  const allUsers = StorageManager.getUsers();
+  const allItems = StorageManager.getItems();
+
+  const canMonitorTeachers = StorageManager.hasPermission('view_teacher_monitor');
+  const teachers = allUsers.filter(u => u.role === 'teacher');
+  const teacherSummaryHtml = canMonitorTeachers ? `
+    <div class="mb-5 p-4 rounded-2xl bg-purple-50/70 border border-purple-200">
+      <h4 class="text-xs font-bold uppercase tracking-wider text-purple-900 mb-2.5 flex items-center gap-1.5">
+        <i class="fa-solid fa-user-tie"></i>
+        សង្ខេបការត្រួតពិនិត្យគ្រូបង្រៀន (Teacher Monitoring)
+      </h4>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+        ${teachers.map(t => {
+          const count = allItems.filter(i => i.createdById === t.id || i.teacher === t.name).length;
+          return `
+            <div class="p-3 rounded-xl bg-white border border-purple-100 text-xs flex items-center justify-between">
+              <div class="min-w-0 pr-2">
+                <p class="font-bold text-slate-900 truncate">${escapeHtml(t.name)}</p>
+                <p class="text-[11px] text-slate-500 truncate">${escapeHtml(t.grade || '')}</p>
+              </div>
+              <span class="px-2.5 py-1 rounded-lg bg-purple-100 text-purple-900 font-bold flex-shrink-0">${count} មេរៀន</span>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  ` : '';
 
   content.innerHTML = `
     <div class="p-6 border-b border-slate-200 bg-gradient-to-r from-indigo-50 to-blue-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1898,8 +2261,8 @@ function openScoreboardModal(activeTab = 'quizzes') {
           <i class="fa-solid fa-table-list"></i>
         </div>
         <div>
-          <span class="text-[11px] font-bold uppercase tracking-wider text-indigo-800">តារាងស្រង់ពិន្ទុ &amp; កិច្ចការផ្ទះ</span>
-          <h3 class="text-lg font-black text-slate-900">លទ្ធផលប្រឡង និងកិច្ចការសិស្ស</h3>
+          <span class="text-[11px] font-bold uppercase tracking-wider text-indigo-800">តារាងស្រង់ពិន្ទុ &amp; កំណត់ត្រាសកម្មភាព</span>
+          <h3 class="text-lg font-black text-slate-900">លទ្ធផលប្រឡង កិច្ចការផ្ទះ និង System Records</h3>
         </div>
       </div>
       <div class="flex items-center gap-2">
@@ -1913,16 +2276,20 @@ function openScoreboardModal(activeTab = 'quizzes') {
       </div>
     </div>
 
-    <div class="px-6 pt-4 border-b border-slate-200 flex items-center gap-2 bg-white">
-      <button onclick="openScoreboardModal('quizzes')" class="px-4 py-2 rounded-t-xl text-xs sm:text-sm font-bold border-b-2 transition ${activeTab === 'quizzes' ? 'border-blue-900 text-blue-900 bg-blue-50/50' : 'border-transparent text-slate-500 hover:text-slate-800'}">
+    <div class="px-6 pt-4 border-b border-slate-200 flex items-center gap-2 bg-white overflow-x-auto">
+      <button onclick="openScoreboardModal('quizzes')" class="px-4 py-2 rounded-t-xl text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap ${activeTab === 'quizzes' ? 'border-blue-900 text-blue-900 bg-blue-50/50' : 'border-transparent text-slate-500 hover:text-slate-800'}">
         <i class="fa-solid fa-pen-nib mr-1"></i> ពិន្ទុ Quiz / ប្រឡង (${quizHistory.length})
       </button>
-      <button onclick="openScoreboardModal('homework')" class="px-4 py-2 rounded-t-xl text-xs sm:text-sm font-bold border-b-2 transition ${activeTab === 'homework' ? 'border-indigo-700 text-indigo-800 bg-indigo-50/50' : 'border-transparent text-slate-500 hover:text-slate-800'}">
+      <button onclick="openScoreboardModal('homework')" class="px-4 py-2 rounded-t-xl text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap ${activeTab === 'homework' ? 'border-indigo-700 text-indigo-800 bg-indigo-50/50' : 'border-transparent text-slate-500 hover:text-slate-800'}">
         <i class="fa-solid fa-file-signature mr-1"></i> កិច្ចការផ្ទះសិស្ស (${submissions.length})
+      </button>
+      <button onclick="openScoreboardModal('records')" class="px-4 py-2 rounded-t-xl text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap ${activeTab === 'records' ? 'border-emerald-700 text-emerald-800 bg-emerald-50/50' : 'border-transparent text-slate-500 hover:text-slate-800'}">
+        <i class="fa-solid fa-clock-rotate-left mr-1"></i> កំណត់ត្រាប្រព័ន្ធ (${activityLogs.length})
       </button>
     </div>
 
     <div class="p-6 overflow-y-auto flex-1">
+      ${teacherSummaryHtml}
       ${activeTab === 'quizzes' ? (
         quizHistory.length === 0
           ? `<div class="text-center py-12 text-slate-500 text-sm bg-slate-50 rounded-2xl border border-slate-200">មិនទាន់មានទិន្នន័យសិស្សធ្វើតេស្ត ឬប្រឡងនៅឡើយទេ។</div>`
@@ -1958,7 +2325,7 @@ function openScoreboardModal(activeTab = 'quizzes') {
                 </tbody>
               </table>
             </div>`
-      ) : (
+      ) : activeTab === 'homework' ? (
         submissions.length === 0
           ? `<div class="text-center py-12 text-slate-500 text-sm bg-slate-50 rounded-2xl border border-slate-200">មិនទាន់មានសិស្សប្រគល់កិច្ចការផ្ទះនៅឡើយទេ។</div>`
           : `<div class="space-y-3">
@@ -1986,6 +2353,34 @@ function openScoreboardModal(activeTab = 'quizzes') {
                   </div>
                 </div>
               `).join('')}
+            </div>`
+      ) : (
+        activityLogs.length === 0
+          ? `<div class="text-center py-12 text-slate-500 text-sm bg-slate-50 rounded-2xl border border-slate-200">មិនទាន់មានកំណត់ត្រាសកម្មភាពនៅឡើយទេ។</div>`
+          : `<div class="overflow-x-auto rounded-2xl border border-slate-200">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr class="bg-slate-100 text-[11px] font-bold uppercase text-slate-500 border-b border-slate-200">
+                    <th class="p-3">ពេលវេលា</th>
+                    <th class="p-3">អ្នកប្រើ</th>
+                    <th class="p-3">តួនាទី</th>
+                    <th class="p-3">សកម្មភាពដែលបានកត់ត្រា</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${activityLogs.slice(0, 80).map(log => {
+                    const meta = ROLE_META[log.userRole] || ROLE_META.student;
+                    return `
+                      <tr class="border-b border-slate-100 hover:bg-slate-50">
+                        <td class="p-3 font-mono text-slate-400 whitespace-nowrap">${escapeHtml((log.timestamp || '').replace('T', ' ').slice(0, 16))}</td>
+                        <td class="p-3 font-bold text-slate-900 whitespace-nowrap">${escapeHtml(log.userName)}</td>
+                        <td class="p-3 whitespace-nowrap"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${meta.badge}">${escapeHtml(meta.short)}</span></td>
+                        <td class="p-3 text-slate-700">${escapeHtml(log.details)}</td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
             </div>`
       )}
     </div>
@@ -2141,10 +2536,11 @@ function handleResetDefaults() {
     StorageManager.resetToDefault();
     showToast('បានកំណត់ទិន្នន័យគំរូឡើងវិញរួចរាល់!');
     closeAllModals();
-    renderCards();
+    renderUserNav();
+    renderGradeFilter();
     renderSubjectFilters();
     renderStats();
-    renderUserNav();
+    renderCards();
   }
 }
 

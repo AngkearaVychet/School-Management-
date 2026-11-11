@@ -11,7 +11,52 @@ const STORAGE_KEYS = {
   COMPLETED_QUIZZES: 'hampton_eduhub_quizzes_v2',
   QUIZ_HISTORY: 'hampton_eduhub_quiz_history_v2',
   HOMEWORK_SUBMISSIONS: 'hampton_eduhub_homeworks_v2',
-  FEATURED_MEDIA: 'hampton_eduhub_featured_media_v2'
+  FEATURED_MEDIA: 'hampton_eduhub_featured_media_v2',
+  ACTIVITY_LOGS: 'hampton_eduhub_activity_logs_v3'
+};
+
+// ព័ត៌មានតួនាទីទាំង ៥ ក្នុងប្រព័ន្ធ (Single Source of Truth)
+const ROLE_META = {
+  admin: {
+    name: 'អ្នកគ្រប់គ្រងប្រព័ន្ធ (Admin)',
+    short: 'Admin',
+    icon: 'fa-user-shield',
+    bg: 'bg-red-600',
+    badge: 'bg-red-100 text-red-800 border-red-300',
+    dot: 'bg-red-600'
+  },
+  head: {
+    name: 'ប្រធានផ្នែក (Head)',
+    short: 'ប្រធានផ្នែក',
+    icon: 'fa-user-tie',
+    bg: 'bg-purple-700',
+    badge: 'bg-purple-100 text-purple-900 border-purple-300',
+    dot: 'bg-purple-600'
+  },
+  teacher: {
+    name: 'លោកគ្រូ-អ្នកគ្រូ (Teacher)',
+    short: 'គ្រូបង្រៀន',
+    icon: 'fa-chalkboard-user',
+    bg: 'bg-blue-900',
+    badge: 'bg-blue-100 text-blue-900 border-blue-300',
+    dot: 'bg-blue-600'
+  },
+  student: {
+    name: 'សិស្សានុសិស្ស (Student)',
+    short: 'សិស្ស',
+    icon: 'fa-user-graduate',
+    bg: 'bg-emerald-600',
+    badge: 'bg-emerald-100 text-emerald-900 border-emerald-300',
+    dot: 'bg-emerald-600'
+  },
+  parent: {
+    name: 'មាតាបិតា (Parent)',
+    short: 'មាតាបិតា',
+    icon: 'fa-users',
+    bg: 'bg-amber-600',
+    badge: 'bg-amber-100 text-amber-900 border-amber-300',
+    dot: 'bg-amber-600'
+  }
 };
 
 // គណនីគំរូលំនាំដើម (Default Seed Users)
@@ -22,13 +67,27 @@ const INITIAL_USERS = [
     password: 'admin123',
     name: 'អ្នកគ្រប់គ្រងប្រព័ន្ធ (Admin)',
     role: 'admin',
-    roleNameKhmer: 'អ្នកគ្រប់គ្រង (Admin)',
-    avatarIcon: 'fa-user-shield',
-    avatarBg: 'bg-red-600',
+    roleNameKhmer: ROLE_META.admin.name,
+    avatarIcon: ROLE_META.admin.icon,
+    avatarBg: ROLE_META.admin.bg,
     email: 'admin@hampton.edu.kh',
     phone: '012 345 678',
     grade: 'គ្រប់កម្រិតថ្នាក់',
     createdAt: '2026-10-01'
+  },
+  {
+    id: 'user-head-1',
+    username: 'head',
+    password: 'head123',
+    name: 'ប្រធានផ្នែក សិក្សាធិការ',
+    role: 'head',
+    roleNameKhmer: ROLE_META.head.name,
+    avatarIcon: ROLE_META.head.icon,
+    avatarBg: ROLE_META.head.bg,
+    email: 'head@hampton.edu.kh',
+    phone: '012 555 888',
+    grade: 'គ្រប់គ្រងគ្រូ សិស្ស និងមាតាបិតា',
+    createdAt: '2026-10-02'
   },
   {
     id: 'user-teacher-1',
@@ -36,12 +95,13 @@ const INITIAL_USERS = [
     password: 'teacher123',
     name: 'លោកគ្រូ អ៊ុក វិបុល',
     role: 'teacher',
-    roleNameKhmer: 'លោកគ្រូ-អ្នកគ្រូ (Teacher)',
-    avatarIcon: 'fa-chalkboard-user',
-    avatarBg: 'bg-blue-900',
+    roleNameKhmer: ROLE_META.teacher.name,
+    avatarIcon: ROLE_META.teacher.icon,
+    avatarBg: ROLE_META.teacher.bg,
     email: 'vibol.ouk@hampton.edu.kh',
     phone: '098 765 432',
-    grade: 'បឋមសិក្សា & English',
+    grade: 'ថ្នាក់ទី១, ថ្នាក់ទី២',
+    assignedGrades: ['ថ្នាក់ទី១', 'ថ្នាក់ទី២'],
     createdAt: '2026-10-05'
   },
   {
@@ -50,13 +110,29 @@ const INITIAL_USERS = [
     password: 'student123',
     name: 'សិស្ស សុខ ពិសិដ្ឋ',
     role: 'student',
-    roleNameKhmer: 'សិស្សានុសិស្ស (Student)',
-    avatarIcon: 'fa-user-graduate',
-    avatarBg: 'bg-emerald-600',
+    roleNameKhmer: ROLE_META.student.name,
+    avatarIcon: ROLE_META.student.icon,
+    avatarBg: ROLE_META.student.bg,
     email: 'piseth.sok@student.hampton.edu.kh',
     phone: '087 112 233',
     grade: 'ថ្នាក់ទី១',
+    createdById: 'user-teacher-1',
     createdAt: '2026-10-10'
+  },
+  {
+    id: 'user-student-2',
+    username: 'maly',
+    password: 'student123',
+    name: 'សិស្ស ចាន់ ម៉ាលី',
+    role: 'student',
+    roleNameKhmer: ROLE_META.student.name,
+    avatarIcon: ROLE_META.student.icon,
+    avatarBg: ROLE_META.student.bg,
+    email: 'maly.chan@student.hampton.edu.kh',
+    phone: '087 223 344',
+    grade: 'ថ្នាក់ទី២',
+    createdById: 'user-teacher-1',
+    createdAt: '2026-10-11'
   },
   {
     id: 'user-parent-1',
@@ -64,11 +140,12 @@ const INITIAL_USERS = [
     password: 'parent123',
     name: 'អាណាព្យាបាល កែវ សម្បត្តិ',
     role: 'parent',
-    roleNameKhmer: 'មាតាបិតា (Parent)',
-    avatarIcon: 'fa-users',
-    avatarBg: 'bg-amber-600',
+    roleNameKhmer: ROLE_META.parent.name,
+    avatarIcon: ROLE_META.parent.icon,
+    avatarBg: ROLE_META.parent.bg,
     email: 'sambath.keo@gmail.com',
     phone: '092 889 900',
+    childId: 'user-student-1',
     childName: 'សិស្ស សុខ ពិសិដ្ឋ',
     childGrade: 'ថ្នាក់ទី១',
     grade: 'ថ្នាក់ទី១',
@@ -83,9 +160,27 @@ const StorageManager = {
       const data = localStorage.getItem(STORAGE_KEYS.USERS);
       if (!data) {
         this.saveUsers(INITIAL_USERS);
+        localStorage.setItem('hampton_eduhub_users_migrated_v3', '1');
         return INITIAL_USERS;
       }
-      return JSON.parse(data);
+      const users = JSON.parse(data);
+      if (!localStorage.getItem('hampton_eduhub_users_migrated_v3') && Array.isArray(users)) {
+        let changed = false;
+        INITIAL_USERS.forEach(seed => {
+          const existing = users.find(u => u.id === seed.id || u.username === seed.username);
+          if (!existing) {
+            users.push(seed);
+            changed = true;
+          } else {
+            if (seed.childId && !existing.childId) { existing.childId = seed.childId; changed = true; }
+            if (seed.assignedGrades && !existing.assignedGrades) { existing.assignedGrades = seed.assignedGrades; changed = true; }
+            if (seed.createdById && !existing.createdById) { existing.createdById = seed.createdById; changed = true; }
+          }
+        });
+        if (changed) this.saveUsers(users);
+        localStorage.setItem('hampton_eduhub_users_migrated_v3', '1');
+      }
+      return users;
     } catch (e) {
       console.error('Error reading users:', e);
       return INITIAL_USERS;
@@ -104,21 +199,25 @@ const StorageManager = {
 
   getCurrentUser() {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-      if (!data) {
-        // លំនាំដើម៖ ចូលប្រើជា Admin ដើម្បីងាយស្រួលសាកល្បង ឬជ្រើសរើស
-        const defaultAdmin = INITIAL_USERS[0];
-        this.setCurrentUser(defaultAdmin);
-        return defaultAdmin;
+      if (!localStorage.getItem('hampton_eduhub_auth_v3')) {
+        localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+        localStorage.setItem('hampton_eduhub_auth_v3', '1');
+        return null;
       }
-      return JSON.parse(data);
+      const data = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+      if (!data) return null;
+      const parsed = JSON.parse(data);
+      if (!parsed || !parsed.id) return null;
+      const fresh = this.getUsers().find(u => u.id === parsed.id);
+      return fresh || parsed;
     } catch (e) {
-      return INITIAL_USERS[0];
+      return null;
     }
   },
 
   setCurrentUser(user) {
     try {
+      localStorage.setItem('hampton_eduhub_auth_v3', '1');
       if (!user) {
         localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
       } else {
@@ -141,33 +240,70 @@ const StorageManager = {
 
     if (user) {
       this.setCurrentUser(user);
+      this.recordActivity('login', `ចូលប្រព័ន្ធជា ${user.roleNameKhmer}`);
       return { success: true, user };
     }
     return { success: false, message: 'ឈ្មោះគណនី ឬពាក្យសម្ងាត់មិនត្រឹមត្រូវឡើយ!' };
   },
 
   logout() {
+    const curr = this.getCurrentUser();
+    if (curr) {
+      this.recordActivity('logout', 'ចាកចេញពីប្រព័ន្ធ');
+    }
     localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
   },
 
+  // តួនាទីដែលអ្នកប្រើប្រាស់បច្ចុប្បន្នអាចបង្កើត ឬគ្រប់គ្រងបាន
+  getManageableRoles(actor = this.getCurrentUser()) {
+    if (!actor) return [];
+    if (actor.role === 'admin') return ['student', 'parent', 'teacher', 'head', 'admin'];
+    if (actor.role === 'head') return ['student', 'parent', 'teacher'];
+    if (actor.role === 'teacher') return ['student', 'parent'];
+    return [];
+  },
+
+  canManageUser(actor, targetUserOrRole) {
+    if (!actor) return false;
+    const targetRole = typeof targetUserOrRole === 'string' ? targetUserOrRole : targetUserOrRole?.role;
+    if (!targetRole) return false;
+    if (actor.role === 'admin') return true;
+    if (actor.role === 'head') return ['teacher', 'student', 'parent'].includes(targetRole);
+    if (actor.role === 'teacher') return ['student', 'parent'].includes(targetRole);
+    return false;
+  },
+
   // បង្កើត User ថ្មី
-  addUser(userData) {
+  addUser(userData, options = {}) {
     const users = this.getUsers();
-    
-    // ពិនិត្យឈ្មោះគណនីជាន់គ្នា
+    const actor = this.getCurrentUser();
+
+    if (options.isSelfRegister) {
+      if (!['student', 'parent'].includes(userData.role)) {
+        return { success: false, message: 'ការចុះឈ្មោះដោយខ្លួនឯងអនុញ្ញាតតែតួនាទី សិស្ស ឬ មាតាបិតា ប៉ុណ្ណោះ!' };
+      }
+    } else if (!actor || !this.canManageUser(actor, userData.role)) {
+      return { success: false, message: 'អ្នកមិនមានសិទ្ធិបង្កើតគណនីតួនាទីនេះទេ!' };
+    }
+
     const exists = users.some(u => u.username.toLowerCase().trim() === userData.username.toLowerCase().trim());
     if (exists) {
       return { success: false, message: 'ឈ្មោះគណនី (Username) នេះមានរួចហើយ សូមជ្រើសរើសឈ្មោះផ្សេង!' };
     }
 
-    const roleMap = {
-      admin: { name: 'អ្នកគ្រប់គ្រង (Admin)', icon: 'fa-user-shield', bg: 'bg-red-600' },
-      teacher: { name: 'លោកគ្រូ-អ្នកគ្រូ (Teacher)', icon: 'fa-chalkboard-user', bg: 'bg-blue-900' },
-      student: { name: 'សិស្សានុសិស្ស (Student)', icon: 'fa-user-graduate', bg: 'bg-emerald-600' },
-      parent: { name: 'មាតាបិតា (Parent)', icon: 'fa-users', bg: 'bg-amber-600' }
-    };
+    const roleInfo = ROLE_META[userData.role] || ROLE_META.student;
 
-    const roleInfo = roleMap[userData.role] || roleMap.student;
+    // ភ្ជាប់ព័ត៌មានកូនដោយស្វ័យប្រវត្តិបើជាមាតាបិតា
+    let childId = userData.childId || '';
+    let childName = userData.childName ? userData.childName.trim() : '';
+    let childGrade = userData.childGrade ? userData.childGrade.trim() : (userData.grade || '');
+    if (userData.role === 'parent' && childId) {
+      const childObj = users.find(u => u.id === childId);
+      if (childObj) {
+        childName = childObj.name;
+        childGrade = childObj.grade;
+      }
+    }
 
     const newUser = {
       id: 'user-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
@@ -178,26 +314,36 @@ const StorageManager = {
       roleNameKhmer: roleInfo.name,
       avatarIcon: roleInfo.icon,
       avatarBg: roleInfo.bg,
-      email: userData.email ? userData.email.trim() : `${userData.username}@hampton.edu.kh`,
+      email: userData.email ? userData.email.trim() : `${userData.username.trim()}@hampton.edu.kh`,
       phone: userData.phone ? userData.phone.trim() : '',
-      grade: userData.grade || 'ទូទៅ',
-      childName: userData.childName ? userData.childName.trim() : '',
-      childGrade: userData.childGrade ? userData.childGrade.trim() : '',
+      grade: userData.role === 'parent' ? (childGrade || userData.grade || 'ថ្នាក់ទី១') : (userData.grade || 'ទូទៅ'),
+      childId,
+      childName,
+      childGrade,
+      createdById: actor ? actor.id : 'self',
       createdAt: new Date().toISOString().split('T')[0]
     };
 
     users.push(newUser);
     this.saveUsers(users);
+    if (actor) {
+      this.recordActivity('create_user', `បង្កើតគណនី ${newUser.name} (${roleInfo.short})`);
+    }
     return { success: true, user: newUser };
   },
 
   // កែប្រែ User
   updateUser(id, updatedFields) {
     const users = this.getUsers();
+    const actor = this.getCurrentUser();
     const index = users.findIndex(u => u.id === id);
     if (index === -1) return { success: false, message: 'រកមិនឃើញអ្នកប្រើប្រាស់នេះទេ' };
 
-    // ពិនិត្យ username កុំឱ្យស្ទួនជាមួយអ្នកផ្សេង
+    const target = users[index];
+    if (!this.canManageUser(actor, target) || (updatedFields.role && !this.canManageUser(actor, updatedFields.role))) {
+      return { success: false, message: 'អ្នកមិនមានសិទ្ធិកែប្រែគណនីនេះទេ!' };
+    }
+
     if (updatedFields.username) {
       const duplicate = users.some(u => u.id !== id && u.username.toLowerCase().trim() === updatedFields.username.toLowerCase().trim());
       if (duplicate) {
@@ -205,36 +351,35 @@ const StorageManager = {
       }
     }
 
-    const roleMap = {
-      admin: { name: 'អ្នកគ្រប់គ្រង (Admin)', icon: 'fa-user-shield', bg: 'bg-red-600' },
-      teacher: { name: 'លោកគ្រូ-អ្នកគ្រូ (Teacher)', icon: 'fa-chalkboard-user', bg: 'bg-blue-900' },
-      student: { name: 'សិស្សានុសិស្ស (Student)', icon: 'fa-user-graduate', bg: 'bg-emerald-600' },
-      parent: { name: 'មាតាបិតា (Parent)', icon: 'fa-users', bg: 'bg-amber-600' }
-    };
-
-    if (updatedFields.role && roleMap[updatedFields.role]) {
-      updatedFields.roleNameKhmer = roleMap[updatedFields.role].name;
-      updatedFields.avatarIcon = roleMap[updatedFields.role].icon;
-      updatedFields.avatarBg = roleMap[updatedFields.role].bg;
+    if (updatedFields.role && ROLE_META[updatedFields.role]) {
+      updatedFields.roleNameKhmer = ROLE_META[updatedFields.role].name;
+      updatedFields.avatarIcon = ROLE_META[updatedFields.role].icon;
+      updatedFields.avatarBg = ROLE_META[updatedFields.role].bg;
     }
 
-    users[index] = { ...users[index], ...updatedFields };
+    users[index] = { ...target, ...updatedFields };
     this.saveUsers(users);
 
-    // បើជា current user ត្រូវ update តាមដែរ
-    const curr = this.getCurrentUser();
-    if (curr && curr.id === id) {
+    if (actor && actor.id === id) {
       this.setCurrentUser(users[index]);
+    }
+    if (actor) {
+      this.recordActivity('update_user', `កែប្រែព័ត៌មានគណនី ${users[index].name}`);
     }
 
     return { success: true, user: users[index] };
   },
 
-  // លុប User (Admin មិនអាចលុបខ្លួនឯងបានទេ ប្រសិនបើជា admin ចុងក្រោយ)
+  // លុប User
   deleteUser(id) {
     const users = this.getUsers();
+    const actor = this.getCurrentUser();
     const userToDelete = users.find(u => u.id === id);
     if (!userToDelete) return { success: false, message: 'រកមិនឃើញអ្នកប្រើប្រាស់' };
+
+    if (!this.canManageUser(actor, userToDelete)) {
+      return { success: false, message: 'អ្នកមិនមានសិទ្ធិលុបគណនីនេះទេ!' };
+    }
 
     const admins = users.filter(u => u.role === 'admin');
     if (userToDelete.role === 'admin' && admins.length <= 1) {
@@ -244,65 +389,159 @@ const StorageManager = {
     const filtered = users.filter(u => u.id !== id);
     this.saveUsers(filtered);
 
-    // បើលុបត្រូវចំ current user
-    const curr = this.getCurrentUser();
-    if (curr && curr.id === id) {
-      this.setCurrentUser(filtered[0] || null);
+    if (actor && actor.id === id) {
+      this.setCurrentUser(null);
+    }
+    if (actor) {
+      this.recordActivity('delete_user', `លុបគណនី ${userToDelete.name}`);
     }
 
     return { success: true };
   },
 
+  // រកព័ត៌មានកូនរបស់មាតាបិតា
+  getParentChild(parentUser) {
+    if (!parentUser) return null;
+    const users = this.getUsers();
+    let child = null;
+    if (parentUser.childId) {
+      child = users.find(u => u.id === parentUser.childId);
+    }
+    if (!child && parentUser.childName) {
+      const targetName = parentUser.childName.trim().toLowerCase();
+      child = users.find(u => u.role === 'student' && u.name.trim().toLowerCase() === targetName);
+    }
+    if (child) return child;
+    return {
+      id: parentUser.childId || '',
+      name: parentUser.childName || 'សិស្ស',
+      grade: parentUser.childGrade || parentUser.grade || 'ថ្នាក់ទី១',
+      username: ''
+    };
+  },
+
+  // ពិនិត្យថាតើ User អាចចូលមើលមេរៀន/លំហាត់នេះបានឬទេ (តាមថ្នាក់ ឬ Assign ដោយគ្រូ)
+  canUserAccessItem(user, item) {
+    if (!user || !item) return false;
+    if (['admin', 'head', 'teacher'].includes(user.role)) return true;
+
+    const assignedIds = Array.isArray(item.assignedStudentIds) ? item.assignedStudentIds : [];
+    if (user.role === 'student') {
+      return item.grade === user.grade || item.grade === 'ទូទៅ' || assignedIds.includes(user.id);
+    }
+    if (user.role === 'parent') {
+      const child = this.getParentChild(user);
+      const childGrade = child ? child.grade : (user.childGrade || user.grade);
+      return item.grade === childGrade || item.grade === 'ទូទៅ' || (child && child.id && assignedIds.includes(child.id));
+    }
+    return false;
+  },
+
   // ================= សិទ្ធិប្រើប្រាស់ (PERMISSIONS) =================
-  // កំណត់សិទ្ធិតាមតួនាទី៖
-  // - 'admin': ធ្វើអ្វីៗបានទាំងអស់ (Manage Users, Manage All Content, Backup, Delete any)
-  // - 'teacher': បង្កើតមេរៀន/លំហាត់, កែប្រែ/លុបមេរៀនរបស់ខ្លួន, មើលពិន្ទុសិស្ស
-  // - 'student': មើលមេរៀន, ធ្វើលំហាត់, Bookmark, មើលប្រវត្តិពិន្ទុខ្លួនឯង
-  // - 'parent': មើលមេរៀន, តាមដានការរៀន និងពិន្ទុរបស់កូន, មើលកិច្ចការ
+  // - 'admin': គ្រប់គ្រង Full System ១០០%
+  // - 'head' (ប្រធានផ្នែក): មើល និងគ្រប់គ្រងលើគ្រូ សិស្ស និងមាតាបិតា + មេរៀន + ពិន្ទុ + កំណត់ត្រាប្រព័ន្ធ
+  // - 'teacher' (គ្រូ): បង្កើត User សិស្ស/មាតាបិតា, បង្កើត/កែមេរៀន, តាមដានសិស្ស & ដាក់ពិន្ទុ
+  // - 'student' (សិស្ស): ចូលរៀន/ធ្វើលំហាត់/កិច្ចការផ្ទះតែថ្នាក់ខ្លួន ឬមេរៀនគ្រូ Assign, System Record
+  // - 'parent' (មាតាបិតា): តាមដាន និងមើលព័ត៌មាន/ពិន្ទុ/សកម្មភាពកូនរបស់ខ្លួន
   hasPermission(action, targetItem = null) {
     const user = this.getCurrentUser();
     if (!user) return false;
 
-    // Admin មានសិទ្ធិទាំងអស់ ១០០%
     if (user.role === 'admin') return true;
 
     switch (action) {
       case 'manage_users':
-        return user.role === 'admin';
+        return user.role === 'head';
+
+      case 'manage_students':
+        return user.role === 'teacher' || user.role === 'head';
 
       case 'backup_system':
-        return user.role === 'admin';
+        return false; // មានតែ Admin ប៉ុណ្ណោះ
 
       case 'create_lesson':
-        return user.role === 'teacher';
+        return user.role === 'teacher' || user.role === 'head';
 
       case 'edit_lesson':
-        if (user.role === 'admin') return true;
+      case 'delete_lesson':
+        if (user.role === 'head') return true;
         if (user.role === 'teacher') {
-          // គ្រូអាចកែសម្រួលមេរៀនរបស់ខ្លួន ឬមេរៀនទាំងអស់បើជាគ្រូ
-          return true;
+          if (!targetItem) return true;
+          return !targetItem.createdById || targetItem.createdById === user.id || targetItem.teacher === user.name;
         }
         return false;
 
-      case 'delete_lesson':
-        if (user.role === 'admin') return true;
-        if (user.role === 'teacher') return true;
-        return false;
+      case 'access_item':
+        return this.canUserAccessItem(user, targetItem);
 
       case 'take_quiz':
-        return true; // គ្រប់គ្នាអាចសាកល្បងធ្វើលំហាត់បាន
+      case 'submit_homework':
+        if (user.role === 'student') return !targetItem || this.canUserAccessItem(user, targetItem);
+        return ['head', 'teacher', 'parent'].includes(user.role);
 
       case 'view_parent_dashboard':
-        return user.role === 'parent' || user.role === 'admin';
+        return user.role === 'parent' || user.role === 'head';
 
       case 'view_scoreboard':
-        return user.role === 'teacher' || user.role === 'admin';
+      case 'view_activity_logs':
+      case 'grade_homework':
+      case 'edit_featured_media':
+        return user.role === 'teacher' || user.role === 'head';
+
+      case 'view_teacher_monitor':
+        return user.role === 'head';
+
+      case 'view_own_records':
+        return user.role === 'student';
 
       case 'bookmark':
         return true;
 
       default:
         return false;
+    }
+  },
+
+  // ================= SYSTEM ACTIVITY RECORDS =================
+  getActivityLogs(filters = {}) {
+    try {
+      let logs = JSON.parse(localStorage.getItem(STORAGE_KEYS.ACTIVITY_LOGS) || '[]');
+      if (filters.userId) {
+        logs = logs.filter(l => l.userId === filters.userId);
+      }
+      if (Array.isArray(filters.roles) && filters.roles.length > 0) {
+        logs = logs.filter(l => filters.roles.includes(l.userRole));
+      }
+      return logs;
+    } catch (e) {
+      return [];
+    }
+  },
+
+  recordActivity(action, details, item = null) {
+    try {
+      const user = this.getCurrentUser();
+      if (!user) return null;
+      const logs = this.getActivityLogs();
+      const entry = {
+        id: 'act-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+        userId: user.id,
+        userName: user.name,
+        userRole: user.role,
+        userGrade: user.grade || '',
+        action,
+        details,
+        itemId: item ? item.id : '',
+        itemTitle: item ? item.title : '',
+        timestamp: new Date().toISOString()
+      };
+      logs.unshift(entry);
+      if (logs.length > 300) logs.length = 300;
+      localStorage.setItem(STORAGE_KEYS.ACTIVITY_LOGS, JSON.stringify(logs));
+      return entry;
+    } catch (e) {
+      console.error('Error recording activity:', e);
+      return null;
     }
   },
 
@@ -313,24 +552,38 @@ const StorageManager = {
       if (!data) {
         this.saveItems(SAMPLE_ITEMS);
         localStorage.setItem('hampton_eduhub_migrated_v26', '1');
+        localStorage.setItem('hampton_eduhub_migrated_v30', '1');
         return SAMPLE_ITEMS;
       }
       const items = JSON.parse(data);
-      if (!localStorage.getItem('hampton_eduhub_migrated_v26') && Array.isArray(items)) {
+      if (!localStorage.getItem('hampton_eduhub_migrated_v30') && Array.isArray(items)) {
         let changed = false;
         items.forEach(item => {
           if (item && item.videoUrl && item.videoUrl.includes('dQw4w9WgXcQ')) {
             item.videoUrl = 'https://www.youtube.com/embed/FE-40gqhuHg';
             changed = true;
           }
+          if (item && (item.id === 'hpt-2' || item.id === 'hpt-11') && !item.createdById) {
+            item.createdById = 'user-teacher-1';
+            changed = true;
+          }
+          if (item && item.id === 'hpt-11' && !Array.isArray(item.assignedStudentIds)) {
+            item.assignedStudentIds = ['user-student-1'];
+            changed = true;
+          }
         });
-        const sampleHw = typeof SAMPLE_ITEMS !== 'undefined' ? SAMPLE_ITEMS.find(i => i.id === 'hpt-11') : null;
-        if (sampleHw && !items.some(i => i.id === 'hpt-11')) {
-          items.push(sampleHw);
-          changed = true;
+        if (typeof SAMPLE_ITEMS !== 'undefined') {
+          ['hpt-11', 'hpt-12'].forEach(seedId => {
+            const seed = SAMPLE_ITEMS.find(i => i.id === seedId);
+            if (seed && !items.some(i => i.id === seedId)) {
+              items.push(seed);
+              changed = true;
+            }
+          });
         }
         if (changed) this.saveItems(items);
         localStorage.setItem('hampton_eduhub_migrated_v26', '1');
+        localStorage.setItem('hampton_eduhub_migrated_v30', '1');
       }
       return items;
     } catch (e) {
@@ -474,6 +727,7 @@ const StorageManager = {
 
       history.unshift(record);
       localStorage.setItem(STORAGE_KEYS.QUIZ_HISTORY, JSON.stringify(history));
+      this.recordActivity('submit_quiz', `ធ្វើលំហាត់/ប្រឡងបានពិន្ទុ ${score}/${total} (${record.percentage}%)`, item);
     } catch (e) {
       console.error(e);
     }
@@ -538,6 +792,7 @@ const StorageManager = {
     };
     all.unshift(submission);
     localStorage.setItem(STORAGE_KEYS.HOMEWORK_SUBMISSIONS, JSON.stringify(all));
+    this.recordActivity('submit_homework', `ប្រគល់កិច្ចការផ្ទះ៖ ${submission.note || submission.driveLink}`, item);
     return submission;
   },
 
@@ -556,6 +811,7 @@ const StorageManager = {
       gradedAt: new Date().toISOString()
     };
     localStorage.setItem(STORAGE_KEYS.HOMEWORK_SUBMISSIONS, JSON.stringify(all));
+    this.recordActivity('grade_homework', `ដាក់ពិន្ទុកិច្ចការ ${all[idx].userName} (${score}/${all[idx].maxScore})`);
     return all[idx];
   },
 
@@ -587,7 +843,7 @@ const StorageManager = {
   exportData() {
     const data = {
       school: SCHOOL_INFO.nameKhmer,
-      version: '2.6',
+      version: '3.0',
       exportedAt: new Date().toISOString(),
       users: this.getUsers(),
       items: this.getItems(),
@@ -595,6 +851,7 @@ const StorageManager = {
       quizResults: this.getQuizResults(),
       quizHistory: this.getQuizHistory(),
       submissions: this.getSubmissions(),
+      activityLogs: this.getActivityLogs(),
       featuredMedia: this.getFeaturedMedia()
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -628,6 +885,9 @@ const StorageManager = {
       if (Array.isArray(data.submissions)) {
         localStorage.setItem(STORAGE_KEYS.HOMEWORK_SUBMISSIONS, JSON.stringify(data.submissions));
       }
+      if (Array.isArray(data.activityLogs)) {
+        localStorage.setItem(STORAGE_KEYS.ACTIVITY_LOGS, JSON.stringify(data.activityLogs));
+      }
       if (data.featuredMedia) {
         this.saveFeaturedMedia(data.featuredMedia);
       }
@@ -640,11 +900,12 @@ const StorageManager = {
   resetToDefault() {
     this.saveItems(SAMPLE_ITEMS);
     this.saveUsers(INITIAL_USERS);
-    this.setCurrentUser(INITIAL_USERS[0]); // default to admin
+    this.setCurrentUser(null);
     localStorage.removeItem(STORAGE_KEYS.BOOKMARKS);
     localStorage.removeItem(STORAGE_KEYS.COMPLETED_QUIZZES);
     localStorage.removeItem(STORAGE_KEYS.QUIZ_HISTORY);
     localStorage.removeItem(STORAGE_KEYS.HOMEWORK_SUBMISSIONS);
+    localStorage.removeItem(STORAGE_KEYS.ACTIVITY_LOGS);
     localStorage.removeItem(STORAGE_KEYS.FEATURED_MEDIA);
     return true;
   }

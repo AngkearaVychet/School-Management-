@@ -125,26 +125,37 @@
             <span>បង្កើតគណនី</span>
           </button>
 
-          <!-- Parent Dashboard Shortcut (Visible to Parent/Admin) -->
+          <!-- Student My Records Shortcut (Visible to Student only) -->
+          <button 
+            id="studentRecordsBtn" 
+            onclick="openStudentRecordsModal()" 
+            title="ប្រវត្តិសិក្សា ពិន្ទុ និងកិច្ចការផ្ទះរបស់ខ្ញុំ" 
+            class="hidden px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-xs sm:text-sm font-bold border border-emerald-200 transition flex items-center gap-1.5 whitespace-nowrap"
+          >
+            <i class="fa-solid fa-clipboard-check text-emerald-700"></i>
+            <span class="hidden md:inline">ប្រវត្តិសិក្សា</span>
+          </button>
+
+          <!-- Parent Dashboard Shortcut (Visible to Parent/Head/Admin) -->
           <button 
             id="parentDashBtn" 
             onclick="openParentModal()" 
             title="ផ្ទាំងតាមដានការរៀនរបស់កូន" 
-            class="hidden px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs sm:text-sm font-bold border border-amber-200 transition items-center gap-1.5"
+            class="hidden px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs sm:text-sm font-bold border border-amber-200 transition flex items-center gap-1.5 whitespace-nowrap"
           >
             <i class="fa-solid fa-chart-line text-amber-600"></i>
             <span class="hidden md:inline">តាមដានកូន</span>
           </button>
 
-          <!-- Admin User Management Button (Visible to Admin only) -->
+          <!-- User Management Button (Admin: All, Head: Teacher/Student/Parent, Teacher: Student/Parent) -->
           <button 
             id="adminManageBtn" 
             onclick="openUserManagementModal()" 
-            title="គ្រប់គ្រងអ្នកប្រើប្រាស់ (Admin Users)" 
-            class="hidden px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 text-xs sm:text-sm font-bold border border-red-200 transition items-center gap-1.5"
+            title="គ្រប់គ្រងអ្នកប្រើប្រាស់ និងសិស្ស" 
+            class="hidden px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 text-xs sm:text-sm font-bold border border-red-200 transition flex items-center gap-1.5 whitespace-nowrap"
           >
             <i class="fa-solid fa-users-gear text-red-600"></i>
-            <span class="hidden md:inline">គ្រប់គ្រង User</span>
+            <span id="userManageBtnLabel" class="hidden md:inline">គ្រប់គ្រង User</span>
           </button>
 
           <!-- Teacher/Admin Scoreboard & Homework Grading Button -->
@@ -554,71 +565,6 @@
         </button>
       </div>
 
-      <!-- Quick 1-Click Role Switcher Demo Cards -->
-      <div class="p-6 pt-4 pb-2 bg-slate-50/70 border-b border-slate-100">
-        <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-          <i class="fa-solid fa-bolt text-amber-500"></i>
-          ចុចចូលគណនីគំរូរហ័ស (Quick Demo Accounts)៖
-        </p>
-        <div class="grid grid-cols-2 gap-2 text-xs">
-          <button 
-            type="button" 
-            onclick="quickLogin('admin')" 
-            class="p-2.5 rounded-xl border border-red-200 bg-white hover:bg-red-50 text-left transition flex items-center gap-2 group"
-          >
-            <div class="w-7 h-7 rounded-lg bg-red-600 text-white flex items-center justify-center text-xs flex-shrink-0">
-              <i class="fa-solid fa-user-shield"></i>
-            </div>
-            <div class="truncate">
-              <span class="font-bold text-red-700 block truncate">Admin</span>
-              <span class="text-[10px] text-slate-400">សិទ្ធិពេញលេញ</span>
-            </div>
-          </button>
-
-          <button 
-            type="button" 
-            onclick="quickLogin('teacher')" 
-            class="p-2.5 rounded-xl border border-blue-200 bg-white hover:bg-blue-50 text-left transition flex items-center gap-2 group"
-          >
-            <div class="w-7 h-7 rounded-lg bg-blue-900 text-white flex items-center justify-center text-xs flex-shrink-0">
-              <i class="fa-solid fa-chalkboard-user"></i>
-            </div>
-            <div class="truncate">
-              <span class="font-bold text-blue-900 block truncate">គ្រូបង្រៀន</span>
-              <span class="text-[10px] text-slate-400">បង្កើត/កែប្រែ</span>
-            </div>
-          </button>
-
-          <button 
-            type="button" 
-            onclick="quickLogin('student')" 
-            class="p-2.5 rounded-xl border border-emerald-200 bg-white hover:bg-emerald-50 text-left transition flex items-center gap-2 group"
-          >
-            <div class="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-xs flex-shrink-0">
-              <i class="fa-solid fa-user-graduate"></i>
-            </div>
-            <div class="truncate">
-              <span class="font-bold text-emerald-800 block truncate">សិស្សានុសិស្ស</span>
-              <span class="text-[10px] text-slate-400">រៀន & ធ្វើលំហាត់</span>
-            </div>
-          </button>
-
-          <button 
-            type="button" 
-            onclick="quickLogin('parent')" 
-            class="p-2.5 rounded-xl border border-amber-200 bg-white hover:bg-amber-50 text-left transition flex items-center gap-2 group"
-          >
-            <div class="w-7 h-7 rounded-lg bg-amber-600 text-white flex items-center justify-center text-xs flex-shrink-0">
-              <i class="fa-solid fa-users"></i>
-            </div>
-            <div class="truncate">
-              <span class="font-bold text-amber-800 block truncate">មាតាបិតា</span>
-              <span class="text-[10px] text-slate-400">តាមដានកូន</span>
-            </div>
-          </button>
-        </div>
-      </div>
-
       <!-- Login Form -->
       <form id="loginForm" class="p-6 space-y-4">
         <div>
@@ -628,7 +574,7 @@
             <input 
               type="text" 
               name="loginUsername" 
-              placeholder="ឧទាហរណ៍៖ admin, teacher, student..." 
+              placeholder="ឧទាហរណ៍៖ student, parent, teacher, head, admin" 
               class="w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none" 
               required 
             />
@@ -657,11 +603,26 @@
           <span>ចូលប្រើប្រាស់ (Log In)</span>
         </button>
 
-        <div class="text-center pt-2">
+        <!-- Demo Credentials Reference -->
+        <details class="rounded-xl bg-slate-50 border border-slate-200 p-3 text-[11px] text-slate-600">
+          <summary class="font-bold text-slate-700 cursor-pointer select-none flex items-center gap-1.5">
+            <i class="fa-solid fa-key text-amber-500"></i>
+            គណនីគំរូសម្រាប់សាកល្បងតួនាទីទាំង ៥
+          </summary>
+          <div class="mt-2.5 space-y-1 font-mono text-[11px] border-t border-slate-200 pt-2">
+            <div><strong class="text-emerald-700">សិស្ស (Student):</strong> student / student123</div>
+            <div><strong class="text-amber-700">មាតាបិតា (Parent):</strong> parent / parent123</div>
+            <div><strong class="text-blue-900">គ្រូ (Teacher):</strong> teacher / teacher123</div>
+            <div><strong class="text-purple-800">ប្រធានផ្នែក (Head):</strong> head / head123</div>
+            <div><strong class="text-red-700">Admin:</strong> admin / admin123</div>
+          </div>
+        </details>
+
+        <div class="text-center pt-1">
           <p class="text-xs text-slate-500">
             មិនទាន់មានគណនី? 
             <button type="button" onclick="openRegisterModal()" class="text-blue-900 font-bold hover:underline">
-              ចុះឈ្មោះគណនីថ្មីនៅទីនេះ
+              ចុះឈ្មោះគណនីសិស្ស / មាតាបិតា
             </button>
           </p>
         </div>
@@ -710,9 +671,7 @@
             <label class="block text-xs font-bold text-slate-700 mb-1">តួនាទី / សិទ្ធិប្រើប្រាស់ (Role) *</label>
             <select name="regRole" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none bg-white font-semibold" required>
               <option value="student" selected>🎓 សិស្សានុសិស្ស (Student)</option>
-              <option value="teacher">👨‍🏫 លោកគ្រូ-អ្នកគ្រូ (Teacher)</option>
               <option value="parent">👨‍👩‍👧 មាតាបិតា (Parent)</option>
-              <option value="admin">🛡️ អ្នកគ្រប់គ្រង (Admin)</option>
             </select>
           </div>
         </div>
@@ -786,7 +745,7 @@
     </div>
   </div>
 
-  <!-- ================= ADMIN USER MANAGEMENT MODAL ================= -->
+  <!-- ================= ROLE-SCOPED USER MANAGEMENT MODAL ================= -->
   <div id="userManagementModal" class="app-modal fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 hidden">
     <div class="modal-backdrop fixed inset-0" onclick="closeAllModals()"></div>
     <div class="modal-container relative bg-white w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden z-10 border border-slate-200 max-h-[90vh] flex flex-col">
@@ -798,9 +757,9 @@
             <i class="fa-solid fa-users-gear"></i>
           </div>
           <div>
-            <span class="text-xs font-bold uppercase tracking-wider text-red-700">ផ្ទាំងគ្រប់គ្រងអភិបាល (Super Admin)</span>
+            <span id="userManageModalSubtitle" class="text-xs font-bold uppercase tracking-wider text-red-700">ផ្ទាំងគ្រប់គ្រងអ្នកប្រើប្រាស់</span>
             <h3 class="text-lg sm:text-xl font-black text-slate-900">
-              ការគ្រប់គ្រងអ្នកប្រើប្រាស់ និងសិទ្ធិ (<span id="totalUsersCount">0</span> នាក់)
+              <span id="userManageModalTitle">ការគ្រប់គ្រងអ្នកប្រើប្រាស់ និងសិទ្ធិ</span> (<span id="totalUsersCount">0</span> នាក់)
             </h3>
           </div>
         </div>
@@ -811,42 +770,42 @@
 
       <div class="p-6 overflow-y-auto flex-1 space-y-6">
         
-        <!-- Admin Add New User Form Section -->
+        <!-- Add New User Form Section -->
         <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200">
-          <h4 class="font-bold text-slate-800 text-sm mb-3 flex items-center gap-2">
+          <h4 id="userCreateFormTitle" class="font-bold text-slate-800 text-sm mb-3 flex items-center gap-2">
             <i class="fa-solid fa-user-plus text-blue-900"></i>
-            បង្កើតគណនីអ្នកប្រើប្រាស់ថ្មី (បង្កើតបានគ្រប់ Role)
+            <span>បង្កើតគណនីអ្នកប្រើប្រាស់ថ្មី</span>
           </h4>
 
           <form id="adminCreateUserForm" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
             <div>
-              <label class="block font-bold text-slate-700 mb-1">ឈ្មោះពេញ</label>
+              <label class="block font-bold text-slate-700 mb-1">ឈ្មោះពេញ *</label>
               <input type="text" name="adminNewName" placeholder="ឧទាហរណ៍៖ ជា សុខា" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-900" required />
             </div>
 
             <div>
-              <label class="block font-bold text-slate-700 mb-1">Username</label>
+              <label class="block font-bold text-slate-700 mb-1">Username *</label>
               <input type="text" name="adminNewUsername" placeholder="ឧទាហរណ៍៖ sokha26" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-900" required />
             </div>
 
             <div>
-              <label class="block font-bold text-slate-700 mb-1">Password</label>
+              <label class="block font-bold text-slate-700 mb-1">Password *</label>
               <input type="password" name="adminNewPassword" placeholder="••••••••" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-900" required />
             </div>
 
             <div>
-              <label class="block font-bold text-slate-700 mb-1">តួនាទី / សិទ្ធិ</label>
-              <select name="adminNewRole" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-900 bg-white font-bold text-slate-800" required>
-                <option value="student">🎓 សិស្ស (Student)</option>
-                <option value="teacher">👨‍🏫 គ្រូ (Teacher)</option>
-                <option value="parent">👨‍👩‍👧 មាតាបិតា (Parent)</option>
-                <option value="admin">🛡️ Admin (អភិបាល)</option>
-              </select>
+              <label class="block font-bold text-slate-700 mb-1">តួនាទី / សិទ្ធិ *</label>
+              <select id="adminNewRoleSelect" name="adminNewRole" onchange="toggleCreateUserParentField()" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-900 bg-white font-bold text-slate-800" required></select>
             </div>
 
             <div>
               <label class="block font-bold text-slate-700 mb-1">កម្រិតថ្នាក់</label>
-              <input type="text" name="adminNewGrade" placeholder="ឧទាហរណ៍៖ ថ្នាក់ទី១ ឬ Primary 1" value="ថ្នាក់ទី១" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-900" />
+              <select id="adminNewGradeSelect" name="adminNewGrade" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-900 bg-white"></select>
+            </div>
+
+            <div id="adminNewChildWrap" class="hidden">
+              <label class="block font-bold text-slate-700 mb-1">ភ្ជាប់កូន (បើជាមាតាបិតា)</label>
+              <select id="adminNewChildSelect" name="adminNewChildId" class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-900 bg-white"></select>
             </div>
 
             <div>
@@ -862,7 +821,7 @@
             <div class="flex items-end">
               <button type="submit" class="w-full py-2 px-3 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-bold transition flex items-center justify-center gap-1.5 shadow-xs">
                 <i class="fa-solid fa-plus text-xs"></i>
-                <span>បញ្ចូល User ថ្មី</span>
+                <span>បង្កើតគណនី</span>
               </button>
             </div>
           </form>
@@ -995,6 +954,14 @@
           </div>
         </div>
 
+        <div class="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-200">
+          <label class="block text-xs font-bold text-indigo-950 mb-1">
+            <i class="fa-solid fa-user-check mr-1 text-indigo-700"></i>
+            Assign ឱ្យសិស្សជាក់លាក់បន្ថែម (ស្រេចចិត្ត — លំនាំដើមគឺគ្រប់សិស្សក្នុងកម្រិតថ្នាក់ខាងលើ)
+          </label>
+          <div id="assignStudentsCheckboxes" class="flex flex-wrap gap-2 mt-2"></div>
+        </div>
+
         <div>
           <div class="flex items-center justify-between mb-1">
             <label class="block text-xs font-bold text-slate-700">ខ្លឹមសារលម្អិតនៃមេរៀន / លំហាត់ (គាំទ្ររូបមន្ត KaTeX Math $...$ និង $$...$$)</label>
@@ -1064,6 +1031,14 @@
           </button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ================= STUDENT MY RECORDS MODAL ================= -->
+  <div id="studentRecordsModal" class="app-modal fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 hidden">
+    <div class="modal-backdrop fixed inset-0" onclick="closeAllModals()"></div>
+    <div class="modal-container relative bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden z-10 border border-slate-200 max-h-[90vh] flex flex-col">
+      <div id="studentRecordsModalContent" class="flex flex-col max-h-[90vh]"></div>
     </div>
   </div>
 
@@ -1175,10 +1150,11 @@
         <div>
           <h4 class="font-bold text-blue-950 text-sm mb-3">សិទ្ធិ និងតួនាទីក្នុងប្រព័ន្ធ</h4>
           <ul class="space-y-2 text-xs text-slate-600">
-            <li><span class="text-red-600 font-bold">🛡️ Admin</span> ៖ មានសិទ្ធិពេញលេញធ្វើអ្វីបានទាំងអស់ (Users, Content, Backup)</li>
-            <li><span class="text-blue-900 font-bold">👨‍🏫 គ្រូ</span> ៖ បង្កើតមេរៀន/លំហាត់, កែប្រែ, មើលពិន្ទុ</li>
-            <li><span class="text-emerald-700 font-bold">🎓 សិស្ស</span> ៖ អានមេរៀន, មើលវីដេអូ, ធ្វើលំហាត់ Quiz</li>
-            <li><span class="text-amber-700 font-bold">👨‍👩‍👧 មាតាបិតា</span> ៖ តាមដានការរៀន និងលទ្ធផលពិន្ទុរបស់កូន</li>
+            <li><span class="text-red-600 font-bold">🛡️ Admin</span> ៖ គ្រប់គ្រង Full System (Users, Content, Records, Backup)</li>
+            <li><span class="text-purple-800 font-bold">👔 ប្រធានផ្នែក</span> ៖ មើល និងគ្រប់គ្រងលើគ្រូ សិស្ស និងមាតាបិតា</li>
+            <li><span class="text-blue-900 font-bold">👨‍🏫 គ្រូ</span> ៖ បង្កើតសិស្ស, បង្កើតមេរៀន, តាមដាន & ដាក់ពិន្ទុ</li>
+            <li><span class="text-emerald-700 font-bold">🎓 សិស្ស</span> ៖ ចូលរៀន និងធ្វើលំហាត់តាមថ្នាក់ដែលគ្រូ Assign</li>
+            <li><span class="text-amber-700 font-bold">👨‍👩‍👧 មាតាបិតា</span> ៖ តាមដានព័ត៌មាន ពិន្ទុ និងកំណត់ត្រារបស់កូន</li>
           </ul>
         </div>
 

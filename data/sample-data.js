@@ -113,6 +113,7 @@ const SAMPLE_ITEMS = [
     program: 'khmer_primary',
     type: 'lesson',
     teacher: 'លោកគ្រូ អ៊ុក វិបុល',
+    createdById: 'user-teacher-1',
     school: 'សាលាអន្តរជាតិ ហេមតុន',
     createdAt: '2026-10-20',
     views: 530,
@@ -524,6 +525,8 @@ Sing along with Teacher Sarah to master the sounds!
     program: 'khmer_primary',
     type: 'homework',
     teacher: 'លោកគ្រូ អ៊ុក វិបុល',
+    createdById: 'user-teacher-1',
+    assignedStudentIds: ['user-student-1'],
     school: 'សាលាអន្តរជាតិ ហេមតុន',
     createdAt: '2026-10-26',
     views: 315,
@@ -544,5 +547,42 @@ Sing along with Teacher Sarah to master the sounds!
       }
     ],
     questions: []
+  },
+
+  // 12. លំហាត់ភាសាខ្មែរ ថ្នាក់ទី១ (Assigned to ថ្នាក់ទី១)
+  {
+    id: 'hpt-12',
+    title: 'លំហាត់ភាសាខ្មែរថ្នាក់ទី១៖ ការប្រកបពាក្យ និងស្រៈនិស្ស័យ',
+    subject: 'khmer',
+    grade: 'ថ្នាក់ទី១',
+    program: 'khmer_primary',
+    type: 'exercise',
+    teacher: 'លោកគ្រូ អ៊ុក វិបុល',
+    createdById: 'user-teacher-1',
+    school: 'សាលាអន្តរជាតិ ហេមតុន',
+    createdAt: '2026-10-27',
+    views: 210,
+    bookmarks: 19,
+    summary: 'កម្រងលំហាត់អនុវត្តសម្រាប់សិស្សថ្នាក់ទី១ ដើម្បីហាត់ប្រកបព្យញ្ជនៈជាមួយស្រៈ និងផ្ទៀងផ្ទាត់ពិន្ទុដោយស្វ័យប្រវត្តិ។',
+    videoUrl: '',
+    content: `
+### គោលបំណងលំហាត់
+សិស្សថ្នាក់ទី១ ហាត់ផ្គុំព្យញ្ជនៈជាមួយស្រៈ ា, ិ, ី, ុ, ូ ឱ្យបានត្រឹមត្រូវ។
+    `,
+    attachments: [],
+    questions: [
+      {
+        question: 'តើពាក្យ "កា" កើតចេញពីព្យញ្ជនៈ "ក" ផ្គុំជាមួយស្រៈណា?',
+        options: ['ស្រៈ អ', 'ស្រៈ អា (ា)', 'ស្រៈ អិ (ិ)', 'ស្រៈ អុ (ុ)'],
+        answer: 1,
+        explanation: 'ក + ា = កា។'
+      },
+      {
+        question: 'តើពាក្យ "គូ" ផ្គុំពីព្យញ្ជនៈ និងស្រៈអ្វី?',
+        options: ['គ + ុ', 'គ + ូ', 'ក + ូ', 'ខ + ូ'],
+        answer: 1,
+        explanation: 'គ + ូ = គូ។'
+      }
+    ]
   }
 ];
