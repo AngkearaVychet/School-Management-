@@ -18,6 +18,175 @@ const state = {
   editingUserId: null
 };
 
+// មុខងារការពារ XSS សម្រាប់អត្ថបទបញ្ចូលដោយអ្នកប្រើប្រាស់
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// បំប្លែង Link ឬ Embed Code (<iframe>) ពី YouTube / Google Drive / MP4 ទៅជាទម្រង់បង្ហាញ
+function parseVideoEmbed(rawInput) {
+  if (!rawInput || !rawInput.trim()) return null;
+  let value = rawInput.trim();
+
+  // បើអ្នកប្រើ Paste កូដ <iframe>...</iframe> ទាំងមូល
+  if (/<iframe/i.test(value)) {
+    const srcMatch = value.match(/src\s*=\s*["']([^"']+)["']/i);
+    if (!srcMatch) return null;
+    value = srcMatch[1].trim();
+  }
+
+  // អនុញ្ញាតតែ http:// ឬ https:// ប៉ុណ្ណោះ
+  if (!/^https?:\/\//i.test(value)) return null;
+
+  // ពិនិត្យតំណភ្ជាប់ YouTube គ្រប់ទម្រង់ (watch?v=, youtu.be/, shorts/, live/, embed/)
+  const ytMatch = value.match(
+    /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{6,15})/i
+  );
+  if (ytMatch) {
+    return {
+      kind: 'iframe',
+      src: `https://www.youtube.com/embed/${ytMatch[1]}`
+    };
+  }
+
+  // ពិនិត្យវីដេអូពី Google Drive (/file/d/<ID>/view)
+  const driveVideoMatch = value.match(/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]+)/i);
+  if (driveVideoMatch) {
+    return {
+      kind: 'iframe',
+      src: `https://drive.google.com/file/d/${driveVideoMatch[1]}/preview`
+    };
+  }
+
+  // ឯកសារវីដេអូផ្ទាល់ (.mp4, .webm, .ogg)
+  if (/\.(mp4|webm|ogg)(\?.*)?$/i.test(value)) {
+    return { kind: 'video', src: value };
+  }
+
+  return { kind: 'iframe', src: value };
+}
+
+// បង្កើត Link សម្រាប់ «មើលឯកសារ» និង «ទាញយកឯកសារ» ពី Google Drive ឬ URL ផ្សេងៗ
+function getDriveActionLinks(rawUrl) {
+  const url = (rawUrl || '').trim();
+  if (!url || url === '#' || url.includes('SAMPLE_FILE_ID')) {
+    return {
+      viewUrl: url || '#',
+      downloadUrl: url || '#',
+      isSample: true,
+      isDrive: true
+    };
+  }
+
+  // Google Drive File (/file/d/ID, open?id=ID, uc?id=ID)
+  const fileIdMatch =
+    url.match(/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]+)/i) ||
+    url.match(/drive\.google\.com\/(?:open|uc)\?(?:.*&)?id=([A-Za-z0-9_-]+)/i);
+  if (fileIdMatch) {
+    const id = fileIdMatch[1];
+    return {
+      viewUrl: `https://drive.google.com/file/d/${id}/view`,
+      downloadUrl: `https://drive.google.com/uc?export=download&id=${id}`,
+      isSample: false,
+      isDrive: true
+    };
+  }
+
+  // Google Docs / Sheets / Slides -> Export PDF សម្រាប់ទាញយក
+  const docsMatch = url.match(/docs\.google\.com\/(document|spreadsheets|presentation)\/d\/([A-Za-z0-9_-]+)/i);
+  if (docsMatch) {
+    const [, docType, id] = docsMatch;
+    return {
+      viewUrl: url,
+      downloadUrl: `https://docs.google.com/${docType}/d/${id}/export?format=pdf`,
+      isSample: false,
+      isDrive: true
+    };
+  }
+
+  // Google Drive Folder
+  if (/drive\.google\.com\/drive\/folders\//i.test(url)) {
+    return {
+      viewUrl: url,
+      downloadUrl: url,
+      isSample: false,
+      isDrive: true
+    };
+  }
+
+  return {
+    viewUrl: url,
+    downloadUrl: url,
+    isSample: false,
+    isDrive: false
+  };
+}
+
+// គ្រប់គ្រងពេលចុច Link គំរូ Google Drive កុំឱ្យចេញ 404
+function handleSampleDriveLink(event, actionType, url, fileName) {
+  if (url && url !== '#' && !url.includes('SAMPLE_FILE_ID')) {
+    return true; // បើក Link ពិតក្នុង Tab ថ្មីធម្មតា
+  }
+  if (event) event.preventDefault();
+
+  const label = (fileName || 'ឯកសារសិក្សា_គំរូ.pdf').trim();
+  const actionTitle = actionType === 'download' ? 'ទាញយកឯកសារ (គំរូ)' : 'មើលឯកសារ (គំរូ)';
+  const currentUser = StorageManager.getCurrentUser();
+  const canEdit = currentUser && (currentUser.role === 'admin' || currentUser.role === 'teacher');
+
+  const modal = document.getElementById('detailModal');
+  const modalContent = document.getElementById('detailModalContent');
+  if (!modal || !modalContent) {
+    showToast('នេះជា Link Google Drive គំរូ — សូមជំនួសដោយ Link ពិតពី Google Drive របស់អ្នក', 'info');
+    return false;
+  }
+
+  modalContent.innerHTML = `
+    <div class="p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-900 text-white flex items-center justify-center">
+          <i class="fa-brands fa-google-drive text-lg"></i>
+        </div>
+        <div>
+          <h3 class="text-base font-black text-slate-900">${escapeHtml(actionTitle)}</h3>
+          <p class="text-xs text-slate-500">${escapeHtml(label)}</p>
+        </div>
+      </div>
+      <button onclick="closeAllModals()" class="w-9 h-9 rounded-xl bg-white hover:bg-slate-100 text-slate-600 flex items-center justify-center border border-slate-200">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="p-6 space-y-4 text-sm text-slate-700">
+      <div class="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-xs sm:text-sm text-amber-900 leading-relaxed">
+        <p class="font-bold mb-1"><i class="fa-solid fa-circle-info mr-1"></i> នេះគឺជាប៊ូតុង Google Drive គំរូ</p>
+        <p>ដើម្បីភ្ជាប់ឯកសារពិតពី Google Drive របស់សាលា៖</p>
+        <ol class="list-decimal list-inside mt-2 space-y-1">
+          <li>Upload ឯកសារ PDF ឬ Word ចូល Google Drive រួចកំណត់ Share ជា <strong>Anyone with the link</strong>។</li>
+          <li>ចម្លង Link នោះ ហើយបិទភ្ជាប់តាមប៊ូតុង <strong>«ប្តូរ Link YouTube / Drive»</strong> ឬក្នុងកូដ <code class="bg-white px-1 rounded">index.html</code>។</li>
+        </ol>
+      </div>
+      <div class="flex flex-wrap items-center justify-end gap-2 pt-2">
+        ${canEdit ? `
+          <button onclick="closeAllModals(); openFeaturedEditModal();" class="px-4 py-2 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold transition">
+            <i class="fa-solid fa-pen-to-square mr-1"></i> ដាក់ Link Google Drive ឥឡូវនេះ
+          </button>
+        ` : ''}
+        <button onclick="closeAllModals()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-100">
+          បិទ
+        </button>
+      </div>
+    </div>
+  `;
+  modal.classList.remove('hidden');
+  return false;
+}
+
 // មុខងារជំនួយ Markdown
 function parseMarkdown(mdText) {
   if (!mdText) return '';
@@ -78,6 +247,8 @@ function getSubjectBadgeClass(color) {
 function renderUserNav() {
   const container = document.getElementById('userNavContainer');
   const teacherAddBtn = document.getElementById('teacherAddBtn');
+  const scoreboardBtn = document.getElementById('scoreboardBtn');
+  const featuredEditBtn = document.getElementById('featuredEditBtn');
   const adminManageBtn = document.getElementById('adminManageBtn');
   const parentDashBtn = document.getElementById('parentDashBtn');
   const backupBtn = document.getElementById('backupBtn');
@@ -107,6 +278,8 @@ function renderUserNav() {
     `;
 
     if (teacherAddBtn) teacherAddBtn.classList.add('hidden');
+    if (scoreboardBtn) scoreboardBtn.classList.add('hidden');
+    if (featuredEditBtn) featuredEditBtn.classList.add('hidden');
     if (adminManageBtn) adminManageBtn.classList.add('hidden');
     if (parentDashBtn) parentDashBtn.classList.add('hidden');
     if (backupBtn) backupBtn.classList.add('hidden');
@@ -200,6 +373,17 @@ function renderUserNav() {
   if (teacherAddBtn) {
     if (canCreate) teacherAddBtn.classList.remove('hidden');
     else teacherAddBtn.classList.add('hidden');
+  }
+
+  const canScoreboard = StorageManager.hasPermission('view_scoreboard');
+  if (scoreboardBtn) {
+    if (canScoreboard) scoreboardBtn.classList.remove('hidden');
+    else scoreboardBtn.classList.add('hidden');
+  }
+
+  if (featuredEditBtn) {
+    if (canScoreboard) featuredEditBtn.classList.remove('hidden');
+    else featuredEditBtn.classList.add('hidden');
   }
 
   if (adminManageBtn) {
@@ -684,6 +868,8 @@ function getFilteredItems() {
     items = items.filter(i => i.type === 'lesson');
   } else if (state.currentTab === 'exercise') {
     items = items.filter(i => i.type === 'exercise');
+  } else if (state.currentTab === 'homework') {
+    items = items.filter(i => i.type === 'homework');
   } else if (state.currentTab === 'video') {
     items = items.filter(i => i.videoUrl && i.videoUrl.trim() !== '');
   } else if (state.currentTab === 'bookmarks') {
@@ -745,7 +931,14 @@ function renderCards() {
     const isSaved = StorageManager.isBookmarked(item.id);
     const hasVideo = item.videoUrl && item.videoUrl.trim() !== '';
     const hasQuestions = item.questions && item.questions.length > 0;
+    const hasAttachments = item.attachments && item.attachments.length > 0;
     const isExercise = item.type === 'exercise';
+    const isHomework = item.type === 'homework';
+    const typeMeta = isHomework
+      ? { color: 'text-purple-800', icon: 'fa-file-signature', label: 'កិច្ចការផ្ទះ' }
+      : isExercise
+        ? { color: 'text-emerald-700', icon: 'fa-pen-to-square', label: 'កម្រងលំហាត់' }
+        : { color: 'text-blue-900', icon: 'fa-book-open', label: 'មេរៀនទ្រឹស្តី' };
 
     // សិទ្ធិកែប្រែ ឬលុប
     const canManageThis = canEditAny || (canEditTeacher && (!item.createdById || item.createdById === currentUser.id || item.teacher === currentUser.name));
@@ -795,35 +988,34 @@ function renderCards() {
           </div>
 
           <div class="mb-2">
-            <span class="inline-block text-[11px] font-bold uppercase tracking-wider ${
-              isExercise ? 'text-emerald-700' : 'text-blue-900'
-            } mb-1">
-              <i class="fa-solid ${isExercise ? 'fa-pen-to-square' : 'fa-book-open'} mr-1"></i>
-              ${isExercise ? 'កម្រងលំហាត់' : 'មេរៀនទ្រឹស្តី'}
+            <span class="inline-block text-[11px] font-bold uppercase tracking-wider ${typeMeta.color} mb-1">
+              <i class="fa-solid ${typeMeta.icon} mr-1"></i>
+              ${typeMeta.label}
             </span>
             <h3 
               onclick="openDetailModal('${item.id}')"
               class="text-base sm:text-lg font-bold text-slate-900 group-hover:text-blue-900 transition cursor-pointer line-clamp-2 leading-snug"
             >
-              ${item.title}
+              ${escapeHtml(item.title)}
             </h3>
           </div>
 
           <p class="text-slate-500 text-xs sm:text-sm line-clamp-2 mb-4 leading-relaxed">
-            ${item.summary || 'ចុចដើម្បីចូលមើលខ្លឹមសារ និងព័ត៌មានលម្អិត...'}
+            ${escapeHtml(item.summary || 'ចុចដើម្បីចូលមើលខ្លឹមសារ និងព័ត៌មានលម្អិត...')}
           </p>
         </div>
 
         <div class="px-5 py-2.5 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
           <div class="flex items-center gap-2 truncate">
             <div class="w-6 h-6 rounded-full bg-blue-900 text-white flex items-center justify-center font-bold text-[10px] flex-shrink-0">
-              ${(item.teacher || 'គ្រូ').charAt(0)}
+              ${escapeHtml((item.teacher || 'គ្រូ').charAt(0))}
             </div>
-            <span class="truncate font-medium text-slate-700">${item.teacher || 'គ្រូបង្រៀន'}</span>
+            <span class="truncate font-medium text-slate-700">${escapeHtml(item.teacher || 'គ្រូបង្រៀន')}</span>
           </div>
 
           <div class="flex items-center gap-2.5 flex-shrink-0">
             ${hasVideo ? '<span class="text-red-600 font-semibold flex items-center gap-1" title="មានវីដេអូ"><i class="fa-solid fa-circle-play"></i> វីដេអូ</span>' : ''}
+            ${hasAttachments ? '<span class="text-blue-800 font-semibold flex items-center gap-1" title="មានឯកសារ Google Drive / PDF"><i class="fa-brands fa-google-drive"></i> ឯកសារ</span>' : ''}
             ${hasQuestions ? `<span class="text-emerald-700 font-semibold flex items-center gap-1" title="មានសំណួរអនុវត្ត"><i class="fa-solid fa-list-check"></i> ${item.questions.length} សំណួរ</span>` : ''}
           </div>
         </div>
@@ -833,8 +1025,8 @@ function renderCards() {
             onclick="openDetailModal('${item.id}')"
             class="flex-1 py-2 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 text-xs font-bold flex items-center justify-center gap-1.5 transition"
           >
-            <i class="fa-solid fa-eye text-xs"></i>
-            <span>អានមេរៀន</span>
+            <i class="fa-solid ${isHomework ? 'fa-file-arrow-up' : 'fa-eye'} text-xs"></i>
+            <span>${isHomework ? 'មើល & ប្រគល់កិច្ចការ' : 'អានមេរៀន'}</span>
           </button>
 
           ${hasQuestions ? `
@@ -860,9 +1052,9 @@ function setTab(tab) {
   document.querySelectorAll('.tab-btn').forEach(btn => {
     const isTarget = btn.getAttribute('data-tab') === tab;
     if (isTarget) {
-      btn.className = 'tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-blue-900 text-white shadow-md transition';
+      btn.className = 'tab-btn flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs sm:text-sm bg-blue-900 text-white shadow-md transition whitespace-nowrap';
     } else {
-      btn.className = 'tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-xs sm:text-sm text-slate-600 hover:bg-slate-100 transition';
+      btn.className = 'tab-btn flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-xs sm:text-sm text-slate-600 hover:bg-slate-100 transition whitespace-nowrap';
     }
   });
   renderCards();
@@ -940,28 +1132,26 @@ function openDetailModal(id) {
   const hasQuestions = item.questions && item.questions.length > 0;
 
   let videoEmbedHtml = '';
-  if (item.videoUrl && item.videoUrl.trim() !== '') {
-    let embedSrc = item.videoUrl;
-    if (embedSrc.includes('watch?v=')) {
-      embedSrc = embedSrc.replace('watch?v=', 'embed/');
-    } else if (embedSrc.includes('youtu.be/')) {
-      const vidId = embedSrc.split('youtu.be/')[1].split('?')[0];
-      embedSrc = `https://www.youtube.com/embed/${vidId}`;
-    }
+  const parsedVideo = parseVideoEmbed(item.videoUrl);
+  if (parsedVideo) {
+    const mediaTag = parsedVideo.kind === 'video'
+      ? `<video src="${escapeHtml(parsedVideo.src)}" controls class="w-full h-full"></video>`
+      : `<iframe 
+            src="${escapeHtml(parsedVideo.src)}" 
+            title="${escapeHtml(item.title)}" 
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+            referrerpolicy="strict-origin-when-cross-origin"
+            allowfullscreen>
+          </iframe>`;
 
     videoEmbedHtml = `
       <div class="mb-6">
         <h4 class="text-sm font-bold text-slate-800 mb-2 flex items-center gap-2">
           <i class="fa-solid fa-circle-play text-red-600"></i>
-          វីដេអូពន្យល់មេរៀន
+          វីដេអូពន្យល់មេរៀន (YouTube / Video)
         </h4>
         <div class="video-container shadow-md">
-          <iframe 
-            src="${embedSrc}" 
-            title="${item.title}" 
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-            allowfullscreen>
-          </iframe>
+          ${mediaTag}
         </div>
       </div>
     `;
@@ -972,32 +1162,123 @@ function openDetailModal(id) {
     attachmentsHtml = `
       <div class="mt-6 p-4 rounded-2xl bg-slate-50 border border-slate-200">
         <h4 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-          <i class="fa-solid fa-paperclip text-blue-900"></i>
-          ឯកសារភ្ជាប់ និងសន្លឹកកិច្ចការ
+          <i class="fa-brands fa-google-drive text-blue-900"></i>
+          ឯកសារភ្ជាប់ និងសន្លឹកកិច្ចការ (Google Drive)
         </h4>
-        <div class="space-y-2">
-          ${item.attachments.map(att => `
-            <div class="flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200 text-xs sm:text-sm">
-              <div class="flex items-center gap-2.5 truncate">
-                <i class="fa-solid fa-file-pdf text-red-600 text-lg"></i>
-                <div>
-                  <p class="font-bold text-slate-800 truncate">${att.name}</p>
-                  <span class="text-xs text-slate-400">${att.size || 'ឯកសារ PDF'}</span>
+        <div class="space-y-2.5">
+          ${item.attachments.map(att => {
+            const links = getDriveActionLinks(att.url);
+            const safeName = escapeHtml(att.name || 'ឯកសារមេរៀន.pdf');
+            const safeSize = escapeHtml(att.size || (links.isDrive ? 'Google Drive' : 'ឯកសារ'));
+            return `
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-white border border-slate-200 text-xs sm:text-sm">
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <i class="fa-solid fa-file-pdf text-red-600 text-lg flex-shrink-0"></i>
+                  <div class="min-w-0">
+                    <p class="font-bold text-slate-800 truncate">${safeName}</p>
+                    <span class="text-xs text-slate-400">${safeSize}</span>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <a 
+                    href="${escapeHtml(links.viewUrl)}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onclick="return handleSampleDriveLink(event, 'view', this.href, '${safeName.replace(/'/g, '')}')"
+                    class="px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-900 font-bold text-xs flex items-center gap-1.5 transition border border-blue-200"
+                  >
+                    <i class="fa-solid fa-eye"></i>
+                    <span>មើលឯកសារ</span>
+                  </a>
+                  <a 
+                    href="${escapeHtml(links.downloadUrl)}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onclick="return handleSampleDriveLink(event, 'download', this.href, '${safeName.replace(/'/g, '')}')"
+                    class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-xs"
+                  >
+                    <i class="fa-solid fa-download"></i>
+                    <span>ទាញយកឯកសារ</span>
+                  </a>
                 </div>
               </div>
-              <button 
-                onclick="alert('ឯកសារគំរូត្រូវបានទាញយកដោយជោគជ័យ!');"
-                class="px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-900 font-bold text-xs flex items-center gap-1.5 transition"
-              >
-                <i class="fa-solid fa-download"></i>
-                ទាញយក
-              </button>
-            </div>
-          `).join('')}
+            `;
+          }).join('')}
         </div>
       </div>
     `;
   }
+
+  // ផ្នែកប្រគល់កិច្ចការផ្ទះ (Homework Submission) និងមើលពិន្ទុ
+  const currentUser = StorageManager.getCurrentUser();
+  const itemSubmissions = StorageManager.getSubmissions(item.id);
+  const mySubmissions = currentUser ? itemSubmissions.filter(s => s.userId === currentUser.id) : [];
+  const isTeacherOrAdmin = currentUser && (currentUser.role === 'teacher' || currentUser.role === 'admin');
+  const showHomeworkSection = item.type === 'homework' || item.type === 'exercise';
+
+  const homeworkHtml = showHomeworkSection ? `
+    <div class="mt-6 p-5 rounded-2xl bg-indigo-50/60 border border-indigo-200 space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-xl bg-indigo-700 text-white flex items-center justify-center text-base shadow-xs flex-shrink-0">
+            <i class="fa-solid fa-file-arrow-up"></i>
+          </div>
+          <div>
+            <h4 class="font-bold text-slate-900 text-sm sm:text-base">ប្រគល់កិច្ចការផ្ទះ (Submit Homework)</h4>
+            <p class="text-xs text-slate-600">ដាក់ Link Google Drive កិច្ចការ ឬសរសេរចម្លើយផ្ញើជូនគ្រូស្រង់ពិន្ទុ</p>
+          </div>
+        </div>
+        ${isTeacherOrAdmin ? `
+          <button
+            type="button"
+            onclick="closeAllModals(); openScoreboardModal('homework');"
+            class="px-3.5 py-2 rounded-xl bg-indigo-700 hover:bg-indigo-800 text-white text-xs font-bold transition flex items-center gap-1.5 self-start sm:self-auto"
+          >
+            <i class="fa-solid fa-table-list"></i>
+            <span>ពិនិត្យ &amp; ដាក់ពិន្ទុ (${itemSubmissions.length})</span>
+          </button>
+        ` : ''}
+      </div>
+
+      <form onsubmit="handleHomeworkSubmit(event, '${item.id}')" class="space-y-3 bg-white p-4 rounded-xl border border-indigo-100">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">តំណភ្ជាប់ Google Drive កិច្ចការរបស់អ្នក (បើមាន)</label>
+          <input type="url" name="hwDriveLink" placeholder="https://drive.google.com/file/d/.../view" class="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-700 focus:outline-none" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">ចម្លើយ ឬកំណត់ចំណាំជូនលោកគ្រូ/អ្នកគ្រូ *</label>
+          <textarea name="hwNote" rows="2" placeholder="សរសេរចម្លើយសង្ខេប ឬសំណួរ..." class="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-700 focus:outline-none" required></textarea>
+        </div>
+        <div class="flex justify-end">
+          <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-700 hover:bg-indigo-800 text-white text-xs font-bold shadow-xs transition flex items-center gap-1.5">
+            <i class="fa-solid fa-paper-plane"></i>
+            <span>បញ្ជូនកិច្ចការផ្ទះ</span>
+          </button>
+        </div>
+      </form>
+
+      ${mySubmissions.length > 0 ? `
+        <div class="space-y-2">
+          <p class="text-xs font-bold text-indigo-900">ប្រវត្តិការប្រគល់កិច្ចការរបស់អ្នក៖</p>
+          ${mySubmissions.map(sub => `
+            <div class="p-3 rounded-xl bg-white border border-slate-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div class="min-w-0">
+                <p class="font-semibold text-slate-800">${escapeHtml(sub.note)}</p>
+                ${sub.driveLink ? `<a href="${escapeHtml(sub.driveLink)}" target="_blank" rel="noopener noreferrer" class="text-blue-700 hover:underline break-all"><i class="fa-brands fa-google-drive mr-1"></i>${escapeHtml(sub.driveLink)}</a>` : ''}
+                ${sub.feedback ? `<p class="text-emerald-800 mt-1"><i class="fa-solid fa-comment-dots mr-1"></i>មតិគ្រូ៖ ${escapeHtml(sub.feedback)}</p>` : ''}
+              </div>
+              <div class="flex-shrink-0">
+                ${sub.status === 'graded'
+                  ? `<span class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold">ពិន្ទុ៖ ${sub.score}/${sub.maxScore}</span>`
+                  : `<span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 font-bold">រង់ចាំគ្រូដាក់ពិន្ទុ</span>`
+                }
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+    </div>
+  ` : '';
 
   modalContent.innerHTML = `
     <div class="p-6 border-b border-slate-200 bg-white sticky top-0 z-10">
@@ -1036,12 +1317,16 @@ function openDetailModal(id) {
           ${item.grade}
         </span>
         <span class="px-2 py-0.5 rounded-md text-xs font-bold uppercase ${
-          item.type === 'exercise' ? 'bg-emerald-50 text-emerald-800' : 'bg-blue-50 text-blue-900'
+          item.type === 'homework'
+            ? 'bg-purple-50 text-purple-800'
+            : item.type === 'exercise'
+              ? 'bg-emerald-50 text-emerald-800'
+              : 'bg-blue-50 text-blue-900'
         }">
-          ${item.type === 'exercise' ? 'លំហាត់' : 'មេរៀន'}
+          ${item.type === 'homework' ? 'កិច្ចការផ្ទះ' : item.type === 'exercise' ? 'លំហាត់' : 'មេរៀន'}
         </span>
       </div>
-      <h2 class="text-lg sm:text-2xl font-black text-slate-900 mt-2 leading-snug">${item.title}</h2>
+      <h2 class="text-lg sm:text-2xl font-black text-slate-900 mt-2 leading-snug">${escapeHtml(item.title)}</h2>
     </div>
 
     <div class="p-6 md:p-8 space-y-6 max-h-[75vh] overflow-y-auto">
@@ -1067,6 +1352,8 @@ function openDetailModal(id) {
       </div>
 
       ${attachmentsHtml}
+
+      ${homeworkHtml}
 
       ${hasQuestions ? `
         <div class="mt-8 p-5 rounded-2xl bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -1362,6 +1649,13 @@ function openEditModal(id, event) {
   form.itemTitle.value = item.title || '';
   form.itemSummary.value = item.summary || '';
   form.itemVideoUrl.value = item.videoUrl || '';
+  if (form.itemDriveName) {
+    form.itemDriveName.value = (item.attachments && item.attachments[0] && item.attachments[0].name) || '';
+  }
+  if (form.itemDriveUrl) {
+    const existingUrl = (item.attachments && item.attachments[0] && item.attachments[0].url) || '';
+    form.itemDriveUrl.value = existingUrl === '#' ? '' : existingUrl;
+  }
   form.itemContent.value = item.content || '';
 
   renderQuestionBuilder(item.questions || []);
@@ -1507,6 +1801,17 @@ function handleItemFormSubmit(e) {
   else if (selectedGrade === 'ថ្នាក់ក្រៅម៉ោង ភាសាអង់គ្លេស') program = 'parttime_en';
   else if (selectedGrade === 'ថ្នាក់ក្រៅម៉ោង ភាសាចិន') program = 'parttime_zh';
 
+  const parsedVid = parseVideoEmbed(form.itemVideoUrl.value);
+  const driveName = form.itemDriveName ? form.itemDriveName.value.trim() : '';
+  const driveUrl = form.itemDriveUrl ? form.itemDriveUrl.value.trim() : '';
+  const attachments = (driveName || driveUrl)
+    ? [{
+        name: driveName || 'ឯកសារមេរៀន_Google_Drive.pdf',
+        size: driveUrl ? 'Google Drive' : 'ឯកសារគំរូ',
+        url: driveUrl || '#'
+      }]
+    : [];
+
   const itemData = {
     type: form.itemType.value,
     title: form.itemTitle.value.trim(),
@@ -1516,11 +1821,9 @@ function handleItemFormSubmit(e) {
     teacher: form.itemTeacher.value.trim() || 'លោកគ្រូ/អ្នកគ្រូ',
     school: SCHOOL_INFO.nameKhmer,
     summary: form.itemSummary.value.trim(),
-    videoUrl: form.itemVideoUrl.value.trim(),
+    videoUrl: parsedVid ? parsedVid.src : form.itemVideoUrl.value.trim(),
     content: form.itemContent.value.trim(),
-    attachments: [
-      { name: 'ឯកសារមេរៀន_ហែមតុន.pdf', size: '1.5 MB', url: '#' }
-    ],
+    attachments,
     questions: questions
   };
 
@@ -1555,6 +1858,245 @@ function confirmDeleteItem(id, event) {
     renderSubjectFilters();
     renderStats();
   }
+}
+
+// ================= HOMEWORK SUBMISSION & SCOREBOARD =================
+function handleHomeworkSubmit(e, itemId) {
+  e.preventDefault();
+  const form = e.target;
+  const driveLink = form.hwDriveLink ? form.hwDriveLink.value.trim() : '';
+  const note = form.hwNote ? form.hwNote.value.trim() : '';
+
+  if (!note && !driveLink) {
+    alert('សូមបញ្ចូលចម្លើយ ឬ Link Google Drive កិច្ចការរបស់អ្នក!');
+    return;
+  }
+
+  StorageManager.addSubmission({ itemId, driveLink, note });
+  showToast('បានបញ្ជូនកិច្ចការផ្ទះដោយជោគជ័យ!', 'success');
+  openDetailModal(itemId);
+}
+
+function openScoreboardModal(activeTab = 'quizzes') {
+  if (!StorageManager.hasPermission('view_scoreboard')) {
+    alert('មានតែគណនីគ្រូបង្រៀន ឬ Admin ប៉ុណ្ណោះដែលអាចមើលតារាងស្រង់ពិន្ទុបាន!');
+    return;
+  }
+
+  const modal = document.getElementById('scoreboardModal');
+  const content = document.getElementById('scoreboardModalContent');
+  if (!modal || !content) return;
+
+  const quizHistory = StorageManager.getQuizHistory();
+  const submissions = StorageManager.getSubmissions();
+
+  content.innerHTML = `
+    <div class="p-6 border-b border-slate-200 bg-gradient-to-r from-indigo-50 to-blue-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-indigo-700 text-white flex items-center justify-center text-lg shadow-sm">
+          <i class="fa-solid fa-table-list"></i>
+        </div>
+        <div>
+          <span class="text-[11px] font-bold uppercase tracking-wider text-indigo-800">តារាងស្រង់ពិន្ទុ &amp; កិច្ចការផ្ទះ</span>
+          <h3 class="text-lg font-black text-slate-900">លទ្ធផលប្រឡង និងកិច្ចការសិស្ស</h3>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="exportScoreboardCsv()" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs">
+          <i class="fa-solid fa-file-csv"></i>
+          <span>ទាញយក CSV (Excel)</span>
+        </button>
+        <button onclick="closeAllModals()" class="w-9 h-9 rounded-xl bg-white hover:bg-slate-100 text-slate-600 flex items-center justify-center border border-slate-200">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="px-6 pt-4 border-b border-slate-200 flex items-center gap-2 bg-white">
+      <button onclick="openScoreboardModal('quizzes')" class="px-4 py-2 rounded-t-xl text-xs sm:text-sm font-bold border-b-2 transition ${activeTab === 'quizzes' ? 'border-blue-900 text-blue-900 bg-blue-50/50' : 'border-transparent text-slate-500 hover:text-slate-800'}">
+        <i class="fa-solid fa-pen-nib mr-1"></i> ពិន្ទុ Quiz / ប្រឡង (${quizHistory.length})
+      </button>
+      <button onclick="openScoreboardModal('homework')" class="px-4 py-2 rounded-t-xl text-xs sm:text-sm font-bold border-b-2 transition ${activeTab === 'homework' ? 'border-indigo-700 text-indigo-800 bg-indigo-50/50' : 'border-transparent text-slate-500 hover:text-slate-800'}">
+        <i class="fa-solid fa-file-signature mr-1"></i> កិច្ចការផ្ទះសិស្ស (${submissions.length})
+      </button>
+    </div>
+
+    <div class="p-6 overflow-y-auto flex-1">
+      ${activeTab === 'quizzes' ? (
+        quizHistory.length === 0
+          ? `<div class="text-center py-12 text-slate-500 text-sm bg-slate-50 rounded-2xl border border-slate-200">មិនទាន់មានទិន្នន័យសិស្សធ្វើតេស្ត ឬប្រឡងនៅឡើយទេ។</div>`
+          : `<div class="overflow-x-auto rounded-2xl border border-slate-200">
+              <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                <thead>
+                  <tr class="bg-slate-100 text-[11px] font-bold uppercase text-slate-500 border-b border-slate-200">
+                    <th class="p-3">#</th>
+                    <th class="p-3">សិស្ស / អ្នកប្រើ</th>
+                    <th class="p-3">មេរៀន / តេស្ត</th>
+                    <th class="p-3">កម្រិតថ្នាក់</th>
+                    <th class="p-3">ពិន្ទុ</th>
+                    <th class="p-3">ភាគរយ</th>
+                    <th class="p-3">កាលបរិច្ឆេទ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${quizHistory.map((rec, i) => `
+                    <tr class="border-b border-slate-100 hover:bg-slate-50">
+                      <td class="p-3 text-slate-400 font-mono">${i + 1}</td>
+                      <td class="p-3 font-bold text-slate-900">${escapeHtml(rec.userName || 'សិស្ស')}</td>
+                      <td class="p-3 text-slate-700 max-w-xs truncate">${escapeHtml(rec.itemTitle || 'លំហាត់')}</td>
+                      <td class="p-3 text-slate-600">${escapeHtml(rec.itemGrade || '-')}</td>
+                      <td class="p-3 font-black text-slate-900">${rec.score} / ${rec.total}</td>
+                      <td class="p-3">
+                        <span class="px-2 py-0.5 rounded-full text-xs font-bold ${(rec.percentage || 0) >= 80 ? 'bg-emerald-100 text-emerald-800' : (rec.percentage || 0) >= 50 ? 'bg-blue-100 text-blue-900' : 'bg-amber-100 text-amber-800'}">
+                          ${rec.percentage || 0}%
+                        </span>
+                      </td>
+                      <td class="p-3 text-slate-400 text-xs">${rec.completedAt ? rec.completedAt.split('T')[0] : '-'}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>`
+      ) : (
+        submissions.length === 0
+          ? `<div class="text-center py-12 text-slate-500 text-sm bg-slate-50 rounded-2xl border border-slate-200">មិនទាន់មានសិស្សប្រគល់កិច្ចការផ្ទះនៅឡើយទេ។</div>`
+          : `<div class="space-y-3">
+              ${submissions.map(sub => `
+                <div class="p-4 rounded-2xl border border-slate-200 bg-white flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div class="space-y-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <span class="font-bold text-slate-900 text-sm">${escapeHtml(sub.userName)}</span>
+                      <span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[11px] font-semibold">${escapeHtml(sub.itemGrade || sub.userGrade || '')}</span>
+                      <span class="text-[11px] text-slate-400">${sub.submittedAt ? sub.submittedAt.split('T')[0] : ''}</span>
+                    </div>
+                    <p class="text-xs font-semibold text-indigo-900">${escapeHtml(sub.itemTitle)}</p>
+                    <p class="text-xs text-slate-700">${escapeHtml(sub.note)}</p>
+                    ${sub.driveLink ? `<a href="${escapeHtml(sub.driveLink)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-xs text-blue-700 hover:underline break-all"><i class="fa-brands fa-google-drive"></i> ${escapeHtml(sub.driveLink)}</a>` : ''}
+                    ${sub.feedback ? `<p class="text-xs text-emerald-800"><i class="fa-solid fa-comment-dots mr-1"></i> មតិគ្រូ៖ ${escapeHtml(sub.feedback)}</p>` : ''}
+                  </div>
+                  <div class="flex items-center gap-2 flex-shrink-0">
+                    ${sub.status === 'graded'
+                      ? `<span class="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">ពិន្ទុ៖ ${sub.score}/${sub.maxScore}</span>`
+                      : `<span class="px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-bold">រង់ចាំដាក់ពិន្ទុ</span>`
+                    }
+                    <button onclick="gradeHomeworkPrompt('${sub.id}')" class="px-3 py-1.5 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold transition">
+                      <i class="fa-solid fa-pen mr-1"></i> ដាក់ពិន្ទុ
+                    </button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>`
+      )}
+    </div>
+  `;
+
+  modal.classList.remove('hidden');
+}
+
+function gradeHomeworkPrompt(submissionId) {
+  const scoreStr = prompt('បញ្ចូលពិន្ទុសិស្ស (លើ ១០០)៖', '90');
+  if (scoreStr === null) return;
+  const score = parseFloat(scoreStr);
+  if (Number.isNaN(score) || score < 0 || score > 100) {
+    alert('សូមបញ្ចូលពិន្ទុជាលេខចន្លោះពី 0 ដល់ 100!');
+    return;
+  }
+  const feedback = prompt('មតិយោបល់របស់លោកគ្រូ/អ្នកគ្រូ (បើមាន)៖', 'ធ្វើបានល្អណាស់!') || '';
+  StorageManager.gradeSubmission(submissionId, score, 100, feedback);
+  showToast('បានរក្សាទុកពិន្ទុកិច្ចការផ្ទះរួចរាល់!', 'success');
+  openScoreboardModal('homework');
+}
+
+function exportScoreboardCsv() {
+  const quizHistory = StorageManager.getQuizHistory();
+  const submissions = StorageManager.getSubmissions();
+  const rows = [['Type', 'Student', 'Item', 'Grade', 'Score', 'Max', 'Percent', 'Date', 'LinkOrFeedback']];
+
+  quizHistory.forEach(r => {
+    rows.push(['Quiz/Exam', r.userName || '', r.itemTitle || '', r.itemGrade || '', r.score, r.total, `${r.percentage || 0}%`, (r.completedAt || '').split('T')[0], '']);
+  });
+  submissions.forEach(s => {
+    const pct = s.score !== null ? `${Math.round((s.score / (s.maxScore || 100)) * 100)}%` : 'Pending';
+    rows.push(['Homework', s.userName || '', s.itemTitle || '', s.itemGrade || '', s.score ?? '', s.maxScore || 100, pct, (s.submittedAt || '').split('T')[0], s.driveLink || s.feedback || '']);
+  });
+
+  const csv = '\uFEFF' + rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `hampton_scoreboard_${new Date().toISOString().split('T')[0]}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('បានទាញយកតារាងពិន្ទុ CSV ដោយជោគជ័យ!', 'success');
+}
+
+// ================= FEATURED YOUTUBE & GOOGLE DRIVE SHOWCASE =================
+const DEFAULT_FEATURED_MEDIA = {
+  title: 'មេរៀនគណិតវិទ្យាគំរូ និងសន្លឹកកិច្ចការសិស្ស',
+  youtubeUrl: 'https://www.youtube.com/embed/FE-40gqhuHg',
+  driveName: 'សន្លឹកកិច្ចការមេរៀន_និង_លំហាត់_គំរូ.pdf',
+  driveUrl: 'https://drive.google.com/file/d/SAMPLE_FILE_ID/view'
+};
+
+function applyFeaturedMedia() {
+  const saved = StorageManager.getFeaturedMedia() || DEFAULT_FEATURED_MEDIA;
+  const iframe = document.getElementById('featuredYoutubeIframe');
+  const titleEl = document.getElementById('featuredVideoTitle');
+  const docNameEl = document.getElementById('featuredDriveDocName');
+  const viewBtn = document.getElementById('featuredDriveViewBtn');
+  const dlBtn = document.getElementById('featuredDriveDownloadBtn');
+
+  const parsed = parseVideoEmbed(saved.youtubeUrl || DEFAULT_FEATURED_MEDIA.youtubeUrl);
+  if (iframe && parsed && parsed.src) iframe.src = parsed.src;
+  if (titleEl) titleEl.textContent = saved.title || DEFAULT_FEATURED_MEDIA.title;
+  if (docNameEl) docNameEl.textContent = saved.driveName || DEFAULT_FEATURED_MEDIA.driveName;
+
+  const links = getDriveActionLinks(saved.driveUrl || DEFAULT_FEATURED_MEDIA.driveUrl);
+  if (viewBtn) viewBtn.href = links.viewUrl;
+  if (dlBtn) dlBtn.href = links.downloadUrl;
+}
+
+function openFeaturedEditModal() {
+  const current = StorageManager.getFeaturedMedia() || DEFAULT_FEATURED_MEDIA;
+  const modal = document.getElementById('featuredEditModal');
+  const form = document.getElementById('featuredEditForm');
+  if (!modal || !form) return;
+
+  form.featTitle.value = current.title || '';
+  form.featYoutube.value = current.youtubeUrl || '';
+  form.featDriveName.value = current.driveName || '';
+  form.featDriveUrl.value = current.driveUrl || '';
+  modal.classList.remove('hidden');
+}
+
+function handleFeaturedEditSubmit(e) {
+  e.preventDefault();
+  const form = e.target;
+  const parsed = parseVideoEmbed(form.featYoutube.value);
+  if (!parsed) {
+    alert('សូមបញ្ចូល Link YouTube ឬកូដ <iframe> ឱ្យបានត្រឹមត្រូវ!');
+    return;
+  }
+
+  StorageManager.saveFeaturedMedia({
+    title: form.featTitle.value.trim(),
+    youtubeUrl: parsed.src,
+    driveName: form.featDriveName.value.trim() || 'ឯកសារមេរៀន_Google_Drive.pdf',
+    driveUrl: form.featDriveUrl.value.trim()
+  });
+  applyFeaturedMedia();
+  closeAllModals();
+  showToast('បានអាប់ដេតវីដេអូ YouTube និង Google Drive ទំព័រដើម!', 'success');
+}
+
+function resetFeaturedMediaUI() {
+  StorageManager.resetFeaturedMedia();
+  applyFeaturedMedia();
+  closeAllModals();
+  showToast('បានត្រឡប់ទៅគំរូដើមវិញរួចរាល់!');
 }
 
 // BACKUP & SETTINGS
@@ -1638,6 +2180,7 @@ function showToast(message, type = 'info') {
 document.addEventListener('DOMContentLoaded', () => {
   StorageManager.getItems(); // trigger seed
   StorageManager.getUsers(); // trigger users seed
+  applyFeaturedMedia();
   renderUserNav();
   renderProgramTabs();
   renderSubjectFilters();
@@ -1645,6 +2188,11 @@ document.addEventListener('DOMContentLoaded', () => {
   renderStats();
   renderCards();
   setupEventListeners();
+
+  const featuredForm = document.getElementById('featuredEditForm');
+  if (featuredForm) {
+    featuredForm.addEventListener('submit', handleFeaturedEditSubmit);
+  }
 
   const form = document.getElementById('itemForm');
   if (form) {

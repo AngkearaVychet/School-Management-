@@ -160,6 +160,17 @@
             <span class="hidden md:inline">គ្រប់គ្រង User</span>
           </button>
 
+          <!-- Teacher/Admin Scoreboard & Homework Grading Button -->
+          <button 
+            id="scoreboardBtn" 
+            onclick="openScoreboardModal()" 
+            title="តារាងស្រង់ពិន្ទុប្រឡង និងកិច្ចការផ្ទះសិស្ស" 
+            class="hidden px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-900 text-xs sm:text-sm font-bold border border-indigo-200 transition flex items-center gap-1.5 whitespace-nowrap"
+          >
+            <i class="fa-solid fa-table-list text-indigo-700"></i>
+            <span class="hidden md:inline">ស្រង់ពិន្ទុ</span>
+          </button>
+
           <!-- Add Content Button (Visible to Teacher & Admin) -->
           <button 
             id="teacherAddBtn" 
@@ -318,6 +329,113 @@
   <!-- ================= MAIN CONTENT SECTION ================= -->
   <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
+    <!-- ================= FEATURED YOUTUBE EMBED & GOOGLE DRIVE RESOURCES ================= -->
+    <section id="featuredResourcesSection" class="mb-8 rounded-3xl bg-white border border-slate-200 shadow-sm overflow-hidden">
+      <div class="px-5 sm:px-6 py-4 bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-red-600 text-white flex items-center justify-center text-lg shadow-sm flex-shrink-0">
+            <i class="fa-brands fa-youtube"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h2 class="text-sm sm:text-base font-black leading-tight">វីដេអូបង្រៀន និងឯកសារសិក្សា Google Drive</h2>
+              <span class="px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-200 border border-amber-300/30 text-[10px] font-bold">
+                គំរូ (Sample)
+              </span>
+            </div>
+            <p class="text-[11px] sm:text-xs text-blue-100/90 mt-0.5">
+              ទស្សនាវីដេអូ YouTube ផ្ទាល់ និងចុចមើល ឬទាញយកឯកសារមេរៀនពី Google Drive
+            </p>
+          </div>
+        </div>
+
+        <button
+          id="featuredEditBtn"
+          type="button"
+          onclick="openFeaturedEditModal()"
+          class="hidden px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold border border-white/25 transition flex items-center gap-1.5 self-start sm:self-auto whitespace-nowrap"
+        >
+          <i class="fa-solid fa-pen-to-square"></i>
+          <span>ប្តូរ Link YouTube / Drive</span>
+        </button>
+      </div>
+
+      <div class="p-5 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+        <!-- Left: YouTube Video Embed Code -->
+        <div class="lg:col-span-7">
+          <!-- កូដបង្កប់វីដេអូ YouTube (Embed Code)៖ ប្តូរ src="https://www.youtube.com/embed/VIDEO_ID" ឬជំនួស <iframe> របស់អ្នកនៅទីនេះ -->
+          <div class="video-container shadow-md border border-slate-200">
+            <iframe
+              id="featuredYoutubeIframe"
+              src="https://www.youtube.com/embed/FE-40gqhuHg"
+              title="វីដេអូបង្រៀនគំរូ - សាលាអន្តរជាតិ ហេមតុន"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerpolicy="strict-origin-when-cross-origin"
+              allowfullscreen
+            ></iframe>
+          </div>
+        </div>
+
+        <!-- Right: Google Drive View & Download Buttons -->
+        <div class="lg:col-span-5 flex flex-col justify-between gap-4">
+          <div class="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-3">
+            <div class="flex items-start gap-3">
+              <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-900 flex items-center justify-center text-lg flex-shrink-0">
+                <i class="fa-brands fa-google-drive"></i>
+              </div>
+              <div class="min-w-0">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-red-600 block">ឯកសារ Google Drive</span>
+                <h3 id="featuredVideoTitle" class="text-sm sm:text-base font-black text-slate-900 leading-snug">
+                  មេរៀនគណិតវិទ្យាគំរូ និងសន្លឹកកិច្ចការសិស្ស
+                </h3>
+                <p id="featuredDriveDocName" class="text-xs text-slate-500 mt-1 truncate">
+                  សន្លឹកកិច្ចការមេរៀន_និង_លំហាត់_គំរូ.pdf
+                </p>
+              </div>
+            </div>
+
+            <p id="featuredVideoDesc" class="text-xs text-slate-600 leading-relaxed">
+              សិស្សានុសិស្ស និងលោកគ្រូ-អ្នកគ្រូ អាចទស្សនាវីដេអូបង្រៀន ហើយចុចប៊ូតុងខាងក្រោមដើម្បីបើកមើល ឬទាញយកឯកសារ PDF ពី Google Drive។
+            </p>
+
+            <!-- ប៊ូតុង "មើលឯកសារ" និង "ទាញយកឯកសារ" ភ្ជាប់ Link ពី Google Drive៖ សូមជំនួស SAMPLE_FILE_ID ដោយ File ID ពិតពី Google Drive របស់អ្នក -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+              <a
+                id="featuredDriveViewBtn"
+                href="https://drive.google.com/file/d/SAMPLE_FILE_ID/view"
+                target="_blank"
+                rel="noopener noreferrer"
+                onclick="return handleSampleDriveLink(event, 'view', this.href, document.getElementById('featuredDriveDocName')?.textContent)"
+                class="py-2.5 px-4 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs sm:text-sm font-bold shadow-sm transition flex items-center justify-center gap-2"
+              >
+                <i class="fa-solid fa-eye"></i>
+                <span>មើលឯកសារ</span>
+              </a>
+
+              <a
+                id="featuredDriveDownloadBtn"
+                href="https://drive.google.com/uc?export=download&id=SAMPLE_FILE_ID"
+                target="_blank"
+                rel="noopener noreferrer"
+                onclick="return handleSampleDriveLink(event, 'download', this.href, document.getElementById('featuredDriveDocName')?.textContent)"
+                class="py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold shadow-sm transition flex items-center justify-center gap-2"
+              >
+                <i class="fa-solid fa-download"></i>
+                <span>ទាញយកឯកសារ</span>
+              </a>
+            </div>
+          </div>
+
+          <div class="px-4 py-3 rounded-xl bg-amber-50/80 border border-amber-200/80 text-[11px] sm:text-xs text-amber-900 flex items-start gap-2.5">
+            <i class="fa-solid fa-circle-info text-amber-600 mt-0.5 flex-shrink-0"></i>
+            <span>
+              <strong>កំណត់សម្គាល់៖</strong> វីដេអូ និងឯកសារនេះជាគំរូបណ្តោះអាសន្ន។ Admin ឬគ្រូអាចចុច <strong>«ប្តូរ Link YouTube / Drive»</strong> ឬកែក្នុង <code class="font-mono bg-white px-1 rounded">index.html</code> ដើម្បីដាក់ Link ពិតរបស់សាលា។
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- Program Track Tabs (Hampton Core Programs) -->
     <div class="mb-5">
       <div class="flex items-center justify-between mb-2">
@@ -357,6 +475,14 @@
         >
           <i class="fa-solid fa-pencil"></i>
           <span>លំហាត់ & តេស្ត</span>
+        </button>
+        <button 
+          data-tab="homework" 
+          onclick="setTab('homework')"
+          class="tab-btn flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-xs sm:text-sm text-slate-600 hover:bg-slate-100 transition whitespace-nowrap"
+        >
+          <i class="fa-solid fa-file-signature"></i>
+          <span>កិច្ចការផ្ទះ</span>
         </button>
         <button 
           data-tab="video" 
@@ -824,7 +950,8 @@
             <label class="block text-xs font-bold text-slate-700 mb-1">ប្រភេទមាតិកា *</label>
             <select name="itemType" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none bg-white" required>
               <option value="lesson">មេរៀនទ្រឹស្តី (Lesson)</option>
-              <option value="exercise">កម្រងលំហាត់ (Exercise)</option>
+              <option value="exercise">កម្រងលំហាត់ & ប្រឡង (Exercise / Exam)</option>
+              <option value="homework">កិច្ចការផ្ទះ (Homework)</option>
             </select>
           </div>
 
@@ -863,10 +990,21 @@
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">តំណភ្ជាប់វីដេអូ YouTube ឬ MP4 (បើមាន)</label>
-          <div class="relative">
-            <i class="fa-solid fa-link absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-            <input type="url" name="itemVideoUrl" placeholder="https://www.youtube.com/watch?v=..." class="w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none" />
+          <label class="block text-xs font-bold text-slate-700 mb-1">កូដបង្កប់វីដេអូ YouTube (Embed Code &lt;iframe&gt;) ឬ Link វីដេអូ YouTube / MP4 (បើមាន)</label>
+          <textarea name="itemVideoUrl" rows="2" placeholder="Paste Link YouTube (https://www.youtube.com/watch?v=...) ឬកូដ Embed (<iframe src=&quot;https://www.youtube.com/embed/...&quot;></iframe>)" class="w-full px-3.5 py-2 text-xs sm:text-sm font-mono rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none"></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">ឈ្មោះឯកសារភ្ជាប់ (Google Drive / PDF)</label>
+            <input type="text" name="itemDriveName" placeholder="ឧទាហរណ៍៖ សន្លឹកកិច្ចការ_ថ្នាក់ទី១.pdf" class="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none bg-white" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">តំណភ្ជាប់ Google Drive (សម្រាប់ មើល &amp; ទាញយក)</label>
+            <div class="relative">
+              <i class="fa-brands fa-google-drive absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+              <input type="url" name="itemDriveUrl" placeholder="https://drive.google.com/file/d/.../view" class="w-full pl-9 pr-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none bg-white" />
+            </div>
           </div>
         </div>
 
@@ -939,6 +1077,69 @@
           </button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ================= SCOREBOARD & HOMEWORK GRADING MODAL ================= -->
+  <div id="scoreboardModal" class="app-modal fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 hidden">
+    <div class="modal-backdrop fixed inset-0" onclick="closeAllModals()"></div>
+    <div class="modal-container relative bg-white w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden z-10 border border-slate-200 max-h-[90vh] flex flex-col">
+      <div id="scoreboardModalContent" class="flex flex-col max-h-[90vh]"></div>
+    </div>
+  </div>
+
+  <!-- ================= FEATURED MEDIA QUICK EDIT MODAL ================= -->
+  <div id="featuredEditModal" class="app-modal fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 hidden">
+    <div class="modal-backdrop fixed inset-0" onclick="closeAllModals()"></div>
+    <div class="modal-container relative bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden z-10 border border-slate-200">
+      <div class="p-6 border-b border-slate-200 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-red-600 text-white flex items-center justify-center">
+            <i class="fa-brands fa-youtube"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-slate-900">កែសម្រួលវីដេអូ YouTube &amp; Google Drive ទំព័រដើម</h3>
+            <p class="text-xs text-slate-500">បិទភ្ជាប់ Embed Code ឬ Link ពិតរបស់សាលា</p>
+          </div>
+        </div>
+        <button onclick="closeAllModals()" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="featuredEditForm" class="p-6 space-y-4 text-sm">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">ចំណងជើងវីដេអូ / ឯកសារ *</label>
+          <input type="text" name="featTitle" class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none" required />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">កូដ Embed YouTube (&lt;iframe&gt;) ឬ Link YouTube *</label>
+          <textarea name="featYoutube" rows="3" placeholder="<iframe src=&quot;https://www.youtube.com/embed/...&quot;></iframe> ឬ https://www.youtube.com/watch?v=..." class="w-full px-3.5 py-2 text-xs font-mono rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none" required></textarea>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">ឈ្មោះឯកសារ Google Drive</label>
+            <input type="text" name="featDriveName" placeholder="សន្លឹកកិច្ចការ_មេរៀន.pdf" class="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Google Drive Link *</label>
+            <input type="url" name="featDriveUrl" placeholder="https://drive.google.com/file/d/.../view" class="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none" required />
+          </div>
+        </div>
+        <div class="flex items-center justify-between pt-2">
+          <button type="button" onclick="resetFeaturedMediaUI()" class="px-3 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-100 transition">
+            ត្រឡប់ទៅគំរូដើម
+          </button>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="closeAllModals()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-100">
+              បោះបង់
+            </button>
+            <button type="submit" class="px-5 py-2 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold shadow-sm transition">
+              រក្សាទុក
+            </button>
+          </div>
+        </div>
+      </form>
     </div>
   </div>
 

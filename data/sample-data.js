@@ -72,7 +72,7 @@ const SAMPLE_ITEMS = [
     views: 420,
     bookmarks: 28,
     summary: 'មេរៀនស្គាល់តួអក្សរព្យញ្ជនៈខ្មែរ ៥ តួដំបូង រូបភាពសត្វ និងការបញ្ចេញសំឡេងសម្រាប់កុមារតូច។',
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    videoUrl: 'https://www.youtube.com/embed/h04tQ0Kx5ho',
     content: `
 ### ១. ព្យញ្ជនៈខ្មែរ ពួក (អ)
 - **ក** ៖ ក្អែក, កែវ, ក្ងោក
@@ -118,7 +118,7 @@ const SAMPLE_ITEMS = [
     views: 530,
     bookmarks: 35,
     summary: 'រៀនរាប់ចំនួន ការបូកបន្ថែម និងការដកចេញដោយប្រើរូបភាពផ្លែឈើ និងបន្ទាត់ចំនួន។',
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    videoUrl: 'https://www.youtube.com/embed/FE-40gqhuHg',
     content: `
 ### ១. វិធីបូកលេខ (ការបន្ថែម)
 - ឧទាហរណ៍៖ មានប៉ោម $5$ ផ្លែ ម៉ាក់ទិញថែម $3$ ផ្លែទៀត
@@ -205,7 +205,7 @@ const SAMPLE_ITEMS = [
     views: 780,
     bookmarks: 59,
     summary: 'ស្វែងយល់ពីដំណើរការរំលាយអាហារពីមាត់ ក្រពះ រហូតដល់ពោះវៀនតូច និងក្រុមចំណីអាហារ ៣ ក្រុម។',
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    videoUrl: 'https://www.youtube.com/embed/ZgzpTx-s9Zo',
     content: `
 ### ១. សរីរាង្គនៃប្រព័ន្ធរំលាយអាហារ
 1. **មាត់** ៖ ទំពារអាហារឱ្យម៉ដ្ឋ និងលាយជាមួយទឹកមាត់ដែលមានអង់ស៊ីមអាមីឡាស។
@@ -251,7 +251,7 @@ const SAMPLE_ITEMS = [
     views: 640,
     bookmarks: 51,
     summary: 'Fun phonics sounds, blending CVC words (cat, bed, pig, fox, sun) with engaging songs and activities.',
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    videoUrl: 'https://www.youtube.com/embed/h04tQ0Kx5ho',
     content: `
 ### 1. Let's Learn Short Vowels!
 - **/a/** as in **Apple, Cat, Hat**
@@ -300,7 +300,7 @@ Sing along with Teacher Sarah to master the sounds!
     views: 890,
     bookmarks: 63,
     summary: 'Learn animal body parts (wings, tails, claws) and how to form sentences using "It has got..." and "They have got...".',
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    videoUrl: 'https://www.youtube.com/embed/h04tQ0Kx5ho',
     content: `
 ### 1. Grammar Rule: Have got / Has got
 - **I / You / We / They** + **have got** (e.g., Birds have got wings.)
@@ -395,7 +395,7 @@ Sing along with Teacher Sarah to master the sounds!
     views: 1120,
     bookmarks: 88,
     summary: 'រៀនប្រព័ន្ធ Pinyin សំឡេងទាំង ៤ តួអក្សរចិន (汉字) នៃការរាប់លេខ និងការសួរសុខទុក្ខប្រចាំថ្ងៃ (你好!)។',
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    videoUrl: 'https://www.youtube.com/embed/FE-40gqhuHg',
     content: `
 ### ១. ការរាប់លេខ ១ ដល់ ១០ ជាភាសាចិន (数字)
 - **一 (yī)** ៖ លេខ ១
@@ -448,7 +448,7 @@ Sing along with Teacher Sarah to master the sounds!
     views: 730,
     bookmarks: 49,
     summary: 'Key phrases for young learners to speak fluently inside the classroom: asking for help, permissions, and sharing.',
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    videoUrl: 'https://www.youtube.com/embed/h04tQ0Kx5ho',
     content: `
 ### Essential Classroom Expressions
 - **May I come in, teacher?** (តើខ្ញុំអាចចូលថ្នាក់បានទេអ្នកគ្រូ?)
@@ -489,7 +489,7 @@ Sing along with Teacher Sarah to master the sounds!
     views: 810,
     bookmarks: 54,
     summary: 'ស្គាល់ Monitor, CPU, Mouse, Keyboard និងការហាត់វាយអក្សរខ្មែរ យូនីកូដ (Khmer Unicode Keyboard)។',
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    videoUrl: 'https://www.youtube.com/embed/ZgzpTx-s9Zo',
     content: `
 ### ១. ផ្នែករឹងសំខាន់ៗនៃកុំព្យូទ័រ (Computer Hardware)
 - **Monitor (អេក្រង់)** ៖ បង្ហាញរូបភាព និងអត្ថបទ
@@ -513,5 +513,36 @@ Sing along with Teacher Sarah to master the sounds!
         explanation: 'CPU (Central Processing Unit) គឺជាខួរក្បាលគណនា និងដំណើរការបញ្ជាទាំងអស់របស់កុំព្យូទ័រ។'
       }
     ]
+  },
+
+  // 11. កិច្ចការផ្ទះគំរូ (Sample Homework Assignment with Google Drive & YouTube)
+  {
+    id: 'hpt-11',
+    title: 'កិច្ចការផ្ទះគំរូ៖ លំហាត់គណិតវិទ្យាថ្នាក់ទី២ និងការបញ្ជូនឯកសារ Google Drive',
+    subject: 'math',
+    grade: 'ថ្នាក់ទី២',
+    program: 'khmer_primary',
+    type: 'homework',
+    teacher: 'លោកគ្រូ អ៊ុក វិបុល',
+    school: 'សាលាអន្តរជាតិ ហេមតុន',
+    createdAt: '2026-10-26',
+    views: 315,
+    bookmarks: 29,
+    summary: 'សិស្សានុសិស្សអាចទស្សនាវីដេអូពន្យល់ មើល ឬទាញយកសន្លឹកកិច្ចការពី Google Drive រួចប្រគល់កិច្ចការផ្ទះដើម្បីគ្រូស្រង់ពិន្ទុ។',
+    videoUrl: 'https://www.youtube.com/embed/FE-40gqhuHg',
+    content: `
+### សេចក្តីណែនាំកិច្ចការផ្ទះ (Homework Guide)
+1. ទស្សនាវីដេអូបង្រៀនខាងលើឱ្យបានយល់ច្បាស់។
+2. ចុចប៊ូតុង **«មើលឯកសារ»** ឬ **«ទាញយកឯកសារ»** ខាងក្រោមដើម្បីយកសន្លឹកកិច្ចការ PDF។
+3. ធ្វើកិច្ចការរួច Upload ចូល Google Drive របស់អ្នក ឬវាយចម្លើយក្នុងប្រអប់ **«ប្រគល់កិច្ចការផ្ទះ»** ខាងក្រោម ដើម្បីឱ្យលោកគ្រូ-អ្នកគ្រូពិនិត្យ និងស្រង់ពិន្ទុ។
+    `,
+    attachments: [
+      {
+        name: 'សន្លឹកកិច្ចការផ្ទះ_គណិតវិទ្យា_ថ្នាក់ទី២_គំរូ.pdf',
+        size: '1.3 MB (Google Drive គំរូ)',
+        url: 'https://drive.google.com/file/d/SAMPLE_FILE_ID/view'
+      }
+    ],
+    questions: []
   }
 ];

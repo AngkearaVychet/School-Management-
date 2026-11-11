@@ -8,7 +8,10 @@ const STORAGE_KEYS = {
   BOOKMARKS: 'hampton_eduhub_bookmarks_v2',
   CURRENT_USER: 'hampton_eduhub_current_user_v2',
   USERS: 'hampton_eduhub_users_v2',
-  COMPLETED_QUIZZES: 'hampton_eduhub_quizzes_v2'
+  COMPLETED_QUIZZES: 'hampton_eduhub_quizzes_v2',
+  QUIZ_HISTORY: 'hampton_eduhub_quiz_history_v2',
+  HOMEWORK_SUBMISSIONS: 'hampton_eduhub_homeworks_v2',
+  FEATURED_MEDIA: 'hampton_eduhub_featured_media_v2'
 };
 
 // គណនីគំរូលំនាំដើម (Default Seed Users)
@@ -292,6 +295,9 @@ const StorageManager = {
       case 'view_parent_dashboard':
         return user.role === 'parent' || user.role === 'admin';
 
+      case 'view_scoreboard':
+        return user.role === 'teacher' || user.role === 'admin';
+
       case 'bookmark':
         return true;
 
@@ -306,9 +312,27 @@ const StorageManager = {
       const data = localStorage.getItem(STORAGE_KEYS.ITEMS);
       if (!data) {
         this.saveItems(SAMPLE_ITEMS);
+        localStorage.setItem('hampton_eduhub_migrated_v26', '1');
         return SAMPLE_ITEMS;
       }
-      return JSON.parse(data);
+      const items = JSON.parse(data);
+      if (!localStorage.getItem('hampton_eduhub_migrated_v26') && Array.isArray(items)) {
+        let changed = false;
+        items.forEach(item => {
+          if (item && item.videoUrl && item.videoUrl.includes('dQw4w9WgXcQ')) {
+            item.videoUrl = 'https://www.youtube.com/embed/FE-40gqhuHg';
+            changed = true;
+          }
+        });
+        const sampleHw = typeof SAMPLE_ITEMS !== 'undefined' ? SAMPLE_ITEMS.find(i => i.id === 'hpt-11') : null;
+        if (sampleHw && !items.some(i => i.id === 'hpt-11')) {
+          items.push(sampleHw);
+          changed = true;
+        }
+        if (changed) this.saveItems(items);
+        localStorage.setItem('hampton_eduhub_migrated_v26', '1');
+      }
+      return items;
     } catch (e) {
       console.error('Error reading items:', e);
       return SAMPLE_ITEMS;
@@ -425,22 +449,31 @@ const StorageManager = {
     localStorage.setItem(STORAGE_KEYS.BOOKMARKS, JSON.stringify(bookmarks));
   },
 
-  // ================= QUIZ RESULTS =================
+  // ================= QUIZ RESULTS & SCOREBOARD =================
   saveQuizResult(itemId, score, total) {
     try {
       const currUser = this.getCurrentUser();
+      const item = this.getItemById(itemId);
+      const history = this.getQuizHistory();
       const existing = JSON.parse(localStorage.getItem(STORAGE_KEYS.COMPLETED_QUIZZES) || '{}');
       const record = {
+        id: 'quiz-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+        itemId,
+        itemTitle: item ? item.title : 'លំហាត់ / ប្រឡង',
+        itemGrade: item ? item.grade : '',
         userId: currUser ? currUser.id : 'guest',
         userName: currUser ? currUser.name : 'ភ្ញៀវ',
         userRole: currUser ? currUser.role : 'guest',
         score,
         total,
-        percentage: Math.round((score / total) * 100),
+        percentage: total > 0 ? Math.round((score / total) * 100) : 0,
         completedAt: new Date().toISOString()
       };
       existing[itemId] = record;
       localStorage.setItem(STORAGE_KEYS.COMPLETED_QUIZZES, JSON.stringify(existing));
+
+      history.unshift(record);
+      localStorage.setItem(STORAGE_KEYS.QUIZ_HISTORY, JSON.stringify(history));
     } catch (e) {
       console.error(e);
     }
@@ -454,16 +487,115 @@ const StorageManager = {
     }
   },
 
+  getQuizHistory() {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.QUIZ_HISTORY);
+      if (data) return JSON.parse(data);
+      // Fallback migration from COMPLETED_QUIZZES if history not populated yet
+      const legacy = Object.entries(this.getQuizResults()).map(([itemId, rec]) => ({
+        id: rec.id || ('legacy-' + itemId),
+        itemId,
+        itemTitle: rec.itemTitle || (this.getItemById(itemId)?.title || 'លំហាត់'),
+        itemGrade: rec.itemGrade || (this.getItemById(itemId)?.grade || ''),
+        ...rec
+      }));
+      return legacy;
+    } catch (e) {
+      return [];
+    }
+  },
+
+  // ================= HOMEWORK SUBMISSIONS =================
+  getSubmissions(itemId = null) {
+    try {
+      const all = JSON.parse(localStorage.getItem(STORAGE_KEYS.HOMEWORK_SUBMISSIONS) || '[]');
+      return itemId ? all.filter(s => s.itemId === itemId) : all;
+    } catch (e) {
+      return [];
+    }
+  },
+
+  addSubmission({ itemId, driveLink, note }) {
+    const currUser = this.getCurrentUser();
+    const item = this.getItemById(itemId);
+    const all = this.getSubmissions();
+    const submission = {
+      id: 'hw-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+      itemId,
+      itemTitle: item ? item.title : 'កិច្ចការផ្ទះ',
+      itemGrade: item ? item.grade : '',
+      userId: currUser ? currUser.id : 'guest',
+      userName: currUser ? currUser.name : 'សិស្ស',
+      userGrade: currUser ? (currUser.grade || '') : '',
+      driveLink: (driveLink || '').trim(),
+      note: (note || '').trim(),
+      status: 'submitted',
+      score: null,
+      maxScore: 100,
+      feedback: '',
+      submittedAt: new Date().toISOString(),
+      gradedAt: null
+    };
+    all.unshift(submission);
+    localStorage.setItem(STORAGE_KEYS.HOMEWORK_SUBMISSIONS, JSON.stringify(all));
+    return submission;
+  },
+
+  gradeSubmission(submissionId, score, maxScore, feedback) {
+    const all = this.getSubmissions();
+    const idx = all.findIndex(s => s.id === submissionId);
+    if (idx === -1) return null;
+    const currUser = this.getCurrentUser();
+    all[idx] = {
+      ...all[idx],
+      score: Number(score),
+      maxScore: Number(maxScore) || 100,
+      feedback: (feedback || '').trim(),
+      status: 'graded',
+      gradedBy: currUser ? currUser.name : 'គ្រូបង្រៀន',
+      gradedAt: new Date().toISOString()
+    };
+    localStorage.setItem(STORAGE_KEYS.HOMEWORK_SUBMISSIONS, JSON.stringify(all));
+    return all[idx];
+  },
+
+  // ================= FEATURED PAGE MEDIA =================
+  getFeaturedMedia() {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.FEATURED_MEDIA);
+      return data ? JSON.parse(data) : null;
+    } catch (e) {
+      return null;
+    }
+  },
+
+  saveFeaturedMedia(media) {
+    try {
+      localStorage.setItem(STORAGE_KEYS.FEATURED_MEDIA, JSON.stringify(media));
+      return true;
+    } catch (e) {
+      console.error(e);
+      return false;
+    }
+  },
+
+  resetFeaturedMedia() {
+    localStorage.removeItem(STORAGE_KEYS.FEATURED_MEDIA);
+  },
+
   // ================= BACKUP & RESTORE =================
   exportData() {
     const data = {
       school: SCHOOL_INFO.nameKhmer,
-      version: '2.5',
+      version: '2.6',
       exportedAt: new Date().toISOString(),
       users: this.getUsers(),
       items: this.getItems(),
       bookmarks: this.getBookmarks(),
-      quizResults: this.getQuizResults()
+      quizResults: this.getQuizResults(),
+      quizHistory: this.getQuizHistory(),
+      submissions: this.getSubmissions(),
+      featuredMedia: this.getFeaturedMedia()
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -490,6 +622,15 @@ const StorageManager = {
       if (Array.isArray(data.bookmarks)) {
         localStorage.setItem(STORAGE_KEYS.BOOKMARKS, JSON.stringify(data.bookmarks));
       }
+      if (Array.isArray(data.quizHistory)) {
+        localStorage.setItem(STORAGE_KEYS.QUIZ_HISTORY, JSON.stringify(data.quizHistory));
+      }
+      if (Array.isArray(data.submissions)) {
+        localStorage.setItem(STORAGE_KEYS.HOMEWORK_SUBMISSIONS, JSON.stringify(data.submissions));
+      }
+      if (data.featuredMedia) {
+        this.saveFeaturedMedia(data.featuredMedia);
+      }
       return { success: true, count };
     } catch (e) {
       return { success: false, message: e.message };
@@ -502,6 +643,9 @@ const StorageManager = {
     this.setCurrentUser(INITIAL_USERS[0]); // default to admin
     localStorage.removeItem(STORAGE_KEYS.BOOKMARKS);
     localStorage.removeItem(STORAGE_KEYS.COMPLETED_QUIZZES);
+    localStorage.removeItem(STORAGE_KEYS.QUIZ_HISTORY);
+    localStorage.removeItem(STORAGE_KEYS.HOMEWORK_SUBMISSIONS);
+    localStorage.removeItem(STORAGE_KEYS.FEATURED_MEDIA);
     return true;
   }
 };
