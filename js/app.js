@@ -404,6 +404,7 @@ function renderUserNav() {
 
 // ចូលប្រើប្រាស់ Login
 function openLoginModal() {
+  closeAllModals();
   const modal = document.getElementById('loginModal');
   if (modal) modal.classList.remove('hidden');
 }
