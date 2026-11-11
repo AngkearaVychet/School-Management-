@@ -306,6 +306,9 @@
   <!-- ================= MAIN CONTENT SECTION ================= -->
   <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
+    <!-- ================= PLP (MOEYS-STYLE) MANAGEMENT HUB BAR ================= -->
+    <section id="plpManagementBar" class="mb-7"></section>
+
     <!-- ================= FEATURED YOUTUBE EMBED & GOOGLE DRIVE RESOURCES ================= -->
     <section id="featuredResourcesSection" class="mb-8 rounded-3xl bg-white border border-slate-200 shadow-sm overflow-hidden">
       <div class="px-5 sm:px-6 py-4 bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -607,6 +610,38 @@
         </div>
       </form>
 
+      <!-- Student QR Code Quick Login (PLP Style) -->
+      <div class="px-6 pb-6 pt-0">
+        <div class="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-2.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+              <i class="fa-solid fa-qrcode text-emerald-700"></i>
+              ចូលរៀនរហ័សតាមកាត QR សិស្ស (PLP QR Pass)
+            </span>
+          </div>
+          <div class="flex items-center gap-2">
+            <input
+              type="text"
+              id="qrLoginCodeInput"
+              placeholder="បញ្ចូលកូដ QR (ឧ. HPT-QR-STUDENT)"
+              class="flex-1 px-3 py-1.5 text-xs font-mono rounded-xl border border-emerald-300 bg-white focus:ring-2 focus:ring-emerald-600 focus:outline-none uppercase"
+            />
+            <button
+              type="button"
+              onclick="handleQrLoginSubmit()"
+              class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition whitespace-nowrap"
+            >
+              ស្កេនចូល
+            </button>
+          </div>
+          <div class="flex flex-wrap items-center gap-1.5 text-[10px]">
+            <span class="text-emerald-800 font-semibold">កាតគំរូ៖</span>
+            <button type="button" onclick="handleQrLoginSubmit('HPT-QR-STUDENT')" class="px-2 py-0.5 rounded-md bg-white border border-emerald-200 text-emerald-900 font-mono hover:bg-emerald-100 transition">HPT-QR-STUDENT</button>
+            <button type="button" onclick="handleQrLoginSubmit('HPT-QR-MALY')" class="px-2 py-0.5 rounded-md bg-white border border-emerald-200 text-emerald-900 font-mono hover:bg-emerald-100 transition">HPT-QR-MALY</button>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -900,14 +935,24 @@
           </div>
         </div>
 
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">ចំណងជើងមេរៀន ឬលំហាត់ *</label>
-          <input type="text" name="itemTitle" placeholder="ឧទាហរណ៍៖ រៀនព្យញ្ជនៈខ្មែរ ក ខ គ ឬ Phonics Fun Short Vowels" class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none" required />
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">ចំណាត់ថ្នាក់ការវាយតម្លៃ (PLP Assessment Type)</label>
+            <select name="itemAssessmentType" class="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none bg-white">
+              <option value="lesson_quiz">លំហាត់តាមមេរៀន (Lesson Quiz)</option>
+              <option value="monthly_test">ប្រឡងប្រចាំខែ (Monthly Test)</option>
+              <option value="semester_exam">ប្រឡងឆមាស (Semester Exam)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">ឈ្មោះលោកគ្រូ/អ្នកគ្រូ *</label>
+            <input type="text" name="itemTeacher" placeholder="ឧទាហរណ៍៖ លោកគ្រូ អ៊ុក វិបុល / Teacher Sarah Jenkins" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none" required />
+          </div>
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">ឈ្មោះលោកគ្រូ/អ្នកគ្រូ *</label>
-          <input type="text" name="itemTeacher" placeholder="ឧទាហរណ៍៖ លោកគ្រូ អ៊ុក វិបុល / Teacher Sarah Jenkins" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none" required />
+          <label class="block text-xs font-bold text-slate-700 mb-1">ចំណងជើងមេរៀន ឬលំហាត់ *</label>
+          <input type="text" name="itemTitle" placeholder="ឧទាហរណ៍៖ រៀនព្យញ្ជនៈខ្មែរ ក ខ គ ឬ Phonics Fun Short Vowels" class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-900 focus:outline-none" required />
         </div>
 
         <div>
@@ -1082,6 +1127,14 @@
           </div>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- ================= PLP UNIFIED MANAGEMENT HUB MODAL ================= -->
+  <div id="plpHubModal" class="app-modal fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-6 hidden">
+    <div class="modal-backdrop fixed inset-0" onclick="closeAllModals()"></div>
+    <div id="plpHubModalContent" class="modal-container relative bg-white w-full max-w-6xl rounded-3xl shadow-2xl overflow-hidden max-h-[92vh] z-10 flex flex-col border border-slate-200">
+      <!-- Dynamic PLP module UI rendered by JS -->
     </div>
   </div>
 

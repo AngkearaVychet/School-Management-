@@ -14,8 +14,16 @@ const state = {
   activeItem: null,
   quizAnswers: {},
   quizSubmitted: false,
+  quizStartedAt: null,
   editingItemId: null,
-  editingUserId: null
+  editingUserId: null,
+  plpTab: 'attendance',
+  plpAttDate: new Date().toISOString().slice(0, 10),
+  plpAttGrade: 'ថ្នាក់ទី១',
+  plpProfileGrade: 'all',
+  editingProfileUserId: null,
+  plpAnalyticsGrade: 'all',
+  plpAnalyticsType: 'all'
 };
 
 // មុខងារការពារ XSS សម្រាប់អត្ថបទបញ្ចូលដោយអ្នកប្រើប្រាស់
@@ -288,6 +296,7 @@ function renderUserNav() {
     [teacherAddBtn, scoreboardBtn, featuredEditBtn, adminManageBtn, studentRecordsBtn, parentDashBtn, backupBtn].forEach(el => {
       if (el) el.classList.add('hidden');
     });
+    renderPlpRoleBar();
     return;
   }
 
@@ -388,6 +397,25 @@ function renderUserNav() {
   if (studentRecordsBtn) studentRecordsBtn.classList.toggle('hidden', !canOwnRecords);
   if (parentDashBtn) parentDashBtn.classList.toggle('hidden', !canParentDash);
   if (backupBtn) backupBtn.classList.toggle('hidden', !canBackup);
+  renderPlpRoleBar();
+}
+
+function handleQrLoginSubmit(presetCode = null) {
+  const input = document.getElementById('qrLoginCodeInput');
+  const raw = presetCode !== null ? presetCode : (input ? input.value : '');
+  const res = StorageManager.loginWithQrToken(raw);
+  if (res.success) {
+    showToast(`ស្កេនកាត QR ជោគជ័យ! សូមស្វាគមន៍ ${res.user.name}`, 'success');
+    if (input) input.value = '';
+    closeAllModals();
+    renderUserNav();
+    renderSubjectFilters();
+    renderGradeFilter();
+    renderStats();
+    renderCards();
+  } else {
+    alert(res.message);
+  }
 }
 
 // ចូលប្រើប្រាស់ Login
@@ -1681,6 +1709,10 @@ function openDetailModal(id) {
           </button>
         </div>
       ` : ''}
+
+      <div id="detailForumSection" class="mt-8">
+        ${buildForumSectionHtml(item)}
+      </div>
     </div>
   `;
 
@@ -1711,6 +1743,7 @@ function openQuizModal(id, event) {
   state.activeItem = item;
   state.quizAnswers = {};
   state.quizSubmitted = false;
+  state.quizStartedAt = Date.now();
 
   renderQuizUI();
 
@@ -1872,15 +1905,30 @@ function submitQuiz() {
   }
 
   let score = 0;
+  const wrongIndices = [];
+  const wrongTexts = [];
   item.questions.forEach((q, idx) => {
     if (state.quizAnswers[idx] === q.answer) {
       score++;
+    } else {
+      wrongIndices.push(idx);
+      wrongTexts.push(q.question || `សំណួរទី ${idx + 1}`);
     }
   });
 
+  const durationSeconds = state.quizStartedAt
+    ? Math.max(1, Math.round((Date.now() - state.quizStartedAt) / 1000))
+    : 0;
+
   state.quizSubmitted = true;
-  StorageManager.saveQuizResult(item.id, score, total);
+  StorageManager.saveQuizResult(item.id, score, total, {
+    assessmentType: item.assessmentType || 'lesson_quiz',
+    wrongQuestionIndices: wrongIndices,
+    wrongQuestionTexts: wrongTexts,
+    durationSeconds
+  });
   renderStats();
+  renderPlpRoleBar();
   renderQuizUI();
 
   const scoreContainer = document.getElementById('quizScoreResult');
@@ -1980,6 +2028,9 @@ function openEditModal(id, event) {
 
   form.itemType.value = item.type || 'lesson';
   form.itemSubject.value = item.subject || 'khmer';
+  if (form.itemAssessmentType) {
+    form.itemAssessmentType.value = item.assessmentType || 'lesson_quiz';
+  }
   populateTeacherGradeSelect(item.grade || 'ថ្នាក់ទី១');
   form.itemTeacher.value = item.teacher || '';
   form.itemTitle.value = item.title || '';
@@ -2154,6 +2205,7 @@ function handleItemFormSubmit(e) {
 
   const itemData = {
     type: form.itemType.value,
+    assessmentType: form.itemAssessmentType ? form.itemAssessmentType.value : 'lesson_quiz',
     title: form.itemTitle.value.trim(),
     subject: form.itemSubject.value,
     grade: selectedGrade,
@@ -2619,3 +2671,1075 @@ document.addEventListener('DOMContentLoaded', () => {
     adminCreateUserForm.addEventListener('submit', handleAdminCreateUser);
   }
 });
+
+// ================= MOEYS PLP (Primary Learning Platform) MANAGEMENT MODULES =================
+
+/**
+ * Generates a deterministic crisp SVG QR-style pass pattern without external CDN calls.
+ */
+function generateQrSvg(code, size = 104) {
+  const clean = String(code || 'HPT-QR');
+  const cells = 15;
+  let hash = 2166136261;
+  for (let i = 0; i < clean.length; i++) {
+    hash ^= clean.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  const isFinder = (r, c) => {
+    const inBox = (br, bc) => r >= br && r < br + 5 && c >= bc && c < bc + 5;
+    const isBorder = (br, bc) => (r === br || r === br + 4 || c === bc || c === bc + 4);
+    const isCore = (br, bc) => r >= br + 2 && r <= br + 2 && c >= bc + 2 && c <= bc + 2;
+    const check = (br, bc) => inBox(br, bc) && (isBorder(br, bc) || isCore(br, bc));
+    return check(0, 0) || check(0, cells - 5) || check(cells - 5, 0);
+  };
+
+  const inFinderArea = (r, c) =>
+    (r < 6 && c < 6) || (r < 6 && c >= cells - 6) || (r >= cells - 6 && c < 6);
+
+  const rects = [];
+  for (let r = 0; r < cells; r++) {
+    for (let c = 0; c < cells; c++) {
+      let dark = false;
+      if (inFinderArea(r, c)) {
+        dark = isFinder(r, c);
+      } else {
+        const bitHash = (hash ^ Math.imul(r + 11, 73856093) ^ Math.imul(c + 17, 19349663)) >>> 0;
+        dark = (bitHash % 10) < 5;
+      }
+      if (dark) {
+        rects.push(`<rect x="${c + 1}" y="${r + 1}" width="1" height="1" rx="0.15" fill="#0f172a"/>`);
+      }
+    }
+  }
+  const view = cells + 2;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${view} ${view}" class="rounded-xl border border-slate-200 bg-white p-1">${rects.join('')}</svg>`;
+}
+
+/**
+ * Renders the PLP Management Hub Bar directly under the Hero Banner based on active role.
+ */
+function renderPlpRoleBar() {
+  const host = document.getElementById('plpManagementBar');
+  if (!host) return;
+
+  const user = StorageManager.getCurrentUser();
+  if (!user) {
+    host.innerHTML = `
+      <div class="rounded-3xl bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-950 text-white p-5 sm:p-6 shadow-md border border-blue-900/40 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div class="flex items-start sm:items-center gap-4">
+          <div class="w-12 h-12 rounded-2xl bg-amber-400/20 border border-amber-300/40 text-amber-300 flex items-center justify-center text-xl flex-shrink-0">
+            <i class="fa-solid fa-layer-group"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap mb-1">
+              <span class="px-2.5 py-0.5 rounded-full bg-emerald-400/20 text-emerald-200 border border-emerald-400/30 text-[10px] font-bold uppercase tracking-wider">
+                MoEYS PLP Model Management
+              </span>
+              <h2 class="text-sm sm:text-base font-black">ប្រព័ន្ធគ្រប់គ្រងសាលា និងការសិក្សាតាមស្តង់ដា PLP (ថ្នាលបឋម)</h2>
+            </div>
+            <p class="text-xs text-blue-100/90 leading-relaxed">
+              គ្រប់គ្រង <strong>វត្តមានសិស្ស-គ្រូ</strong>, <strong>ប្រវត្តិសុខភាព &amp; កាត QR សិស្ស</strong>, <strong>វិភាគលទ្ធផល &amp; សិស្សត្រូវការជំនួយ</strong>, <strong>វេទិកាសួរ-ឆ្លើយមេរៀន</strong> និង <strong>ប្រឹក្សាគរុកោសល្យ-ស្តង់ដាសាលាគំរូ</strong>។
+            </p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap flex-shrink-0">
+          <button onclick="openLoginModal()" class="px-4 py-2 rounded-xl bg-white text-blue-950 hover:bg-blue-50 text-xs font-bold shadow-xs transition flex items-center gap-1.5">
+            <i class="fa-solid fa-qrcode text-emerald-700"></i>
+            <span>ចូលប្រព័ន្ធ / ស្កេនកាត QR</span>
+          </button>
+          <button onclick="openRegisterModal()" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold shadow-xs transition flex items-center gap-1.5">
+            <i class="fa-solid fa-user-plus"></i>
+            <span>+ ចុះឈ្មោះគណនី</span>
+          </button>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  const canMentoring = StorageManager.hasPermission('view_mentoring');
+  const analytics = StorageManager.getPlpAnalytics({});
+  const mentoring = StorageManager.getMentoringData();
+  const standardsList = Object.values(mentoring.standards || {});
+  const avgStandardScore = standardsList.length
+    ? Math.round((standardsList.reduce((s, x) => s + (x.score || 0), 0) / (standardsList.length * 5)) * 100)
+    : 0;
+
+  let statusChip = '';
+  if (user.role === 'student') {
+    const att = StorageManager.getStudentAttendanceSummary(user.id);
+    const qr = StorageManager.getUserQrToken(user);
+    statusChip = `វត្តមាន ${att.rate}% • កូដ QR: <span class="font-mono font-bold text-emerald-800">${escapeHtml(qr)}</span>`;
+  } else if (user.role === 'parent') {
+    const child = StorageManager.getParentChild(user);
+    const att = child ? StorageManager.getStudentAttendanceSummary(child.id) : { rate: 100 };
+    statusChip = child
+      ? `កូន៖ <strong>${escapeHtml(child.name)}</strong> (${escapeHtml(child.grade)}) • វត្តមាន ${att.rate}%`
+      : 'មិនទាន់ភ្ជាប់ឈ្មោះកូន';
+  } else {
+    statusChip = `សិស្ស ${analytics.totalStudents} នាក់ • ត្រូវការជំនួយ ${analytics.atRiskStudents.length} នាក់ • ស្តង់ដាសាលាគំរូ ${avgStandardScore}%`;
+  }
+
+  const badgeInfo = ROLE_META[user.role] || ROLE_META.student;
+
+  host.innerHTML = `
+    <div class="rounded-3xl bg-white border border-slate-200 p-4 sm:p-5 shadow-xs space-y-4">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl ${badgeInfo.bg} text-white flex items-center justify-center text-base shadow-xs flex-shrink-0">
+            <i class="fa-solid ${badgeInfo.icon}"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h2 class="text-sm sm:text-base font-black text-blue-950">មជ្ឈមណ្ឌលគ្រប់គ្រង PLP (School Management Hub)</h2>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${badgeInfo.badge}">${escapeHtml(badgeInfo.short)}</span>
+            </div>
+            <p class="text-xs text-slate-600 mt-0.5">${statusChip}</p>
+          </div>
+        </div>
+        ${user.role === 'student' ? `
+          <button onclick="openStudentRecordsModal()" class="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 text-xs font-bold transition flex items-center gap-1.5 self-start md:self-auto">
+            <i class="fa-solid fa-clipboard-check"></i>
+            <span>ប្រវត្តិពិន្ទុ &amp; កិច្ចការខ្ញុំ</span>
+          </button>
+        ` : user.role === 'parent' ? `
+          <button onclick="openParentModal()" class="px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold transition flex items-center gap-1.5 self-start md:self-auto">
+            <i class="fa-solid fa-child-reaching"></i>
+            <span>ផ្ទាំងតាមដានកូនលម្អិត</span>
+          </button>
+        ` : `
+          <button onclick="openScoreboardModal()" class="px-3.5 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 text-xs font-bold transition flex items-center gap-1.5 self-start md:self-auto">
+            <i class="fa-solid fa-table-list"></i>
+            <span>តារាងស្រង់ពិន្ទុ &amp; CSV</span>
+          </button>
+        `}
+      </div>
+
+      <div class="grid grid-cols-2 ${canMentoring ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-2.5 sm:gap-3">
+        <button onclick="openPlpHubModal('attendance')" class="p-3 rounded-2xl bg-sky-50/80 hover:bg-sky-100/80 border border-sky-200 text-left transition group flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-sky-600 text-white flex items-center justify-center text-base flex-shrink-0 group-hover:scale-105 transition">
+            <i class="fa-solid fa-clipboard-user"></i>
+          </div>
+          <div class="min-w-0">
+            <p class="text-xs sm:text-sm font-bold text-slate-900 truncate">វត្តមានសិស្ស &amp; គ្រូ</p>
+            <p class="text-[11px] text-slate-600 truncate">${StorageManager.hasPermission('manage_attendance') ? 'ស្រង់វត្តមានប្រចាំថ្ងៃ' : 'ពិនិត្យកំណត់ត្រាវត្តមាន'}</p>
+          </div>
+        </button>
+
+        <button onclick="openPlpHubModal('profiles')" class="p-3 rounded-2xl bg-emerald-50/80 hover:bg-emerald-100/80 border border-emerald-200 text-left transition group flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-base flex-shrink-0 group-hover:scale-105 transition">
+            <i class="fa-solid fa-qrcode"></i>
+          </div>
+          <div class="min-w-0">
+            <p class="text-xs sm:text-sm font-bold text-slate-900 truncate">ប្រវត្តិសិស្ស សុខភាព &amp; QR</p>
+            <p class="text-[11px] text-slate-600 truncate">${user.role === 'student' ? 'កាត QR និងសុខភាពខ្ញុំ' : 'បញ្ជីសុខភាព &amp; កាត QR'}</p>
+          </div>
+        </button>
+
+        <button onclick="openPlpHubModal('analytics')" class="p-3 rounded-2xl bg-amber-50/80 hover:bg-amber-100/80 border border-amber-200 text-left transition group flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center text-base flex-shrink-0 group-hover:scale-105 transition">
+            <i class="fa-solid fa-chart-pie"></i>
+          </div>
+          <div class="min-w-0">
+            <p class="text-xs sm:text-sm font-bold text-slate-900 truncate">វិភាគការសិក្សា &amp; កិត្តិយស</p>
+            <p class="text-[11px] text-slate-600 truncate">សិស្សពូកែ &amp; ចំណុចត្រូវជួយ</p>
+          </div>
+        </button>
+
+        ${canMentoring ? `
+          <button onclick="openPlpHubModal('mentoring')" class="p-3 rounded-2xl bg-purple-50/80 hover:bg-purple-100/80 border border-purple-200 text-left transition group flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-purple-700 text-white flex items-center justify-center text-base flex-shrink-0 group-hover:scale-105 transition">
+              <i class="fa-solid fa-award"></i>
+            </div>
+            <div class="min-w-0">
+              <p class="text-xs sm:text-sm font-bold text-slate-900 truncate">គរុកោសល្យ &amp; ស្តង់ដាសាលា</p>
+              <p class="text-[11px] text-slate-600 truncate">${StorageManager.hasPermission('manage_mentoring') ? 'វាយតម្លៃគ្រូ &amp; ៥ ស្តង់ដា' : 'មតិប្រឹក្សាគរុកោសល្យ'}</p>
+            </div>
+          </button>
+        ` : ''}
+      </div>
+    </div>
+  `;
+}
+
+// ----------------- PLP LESSON Q&A FORUM -----------------
+function buildForumSectionHtml(item) {
+  const posts = StorageManager.getForumPosts(item.id);
+  const canPost = StorageManager.hasPermission('post_forum', item);
+  const canModerate = StorageManager.hasPermission('moderate_forum');
+
+  return `
+    <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-4">
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-blue-900 text-white flex items-center justify-center text-sm">
+            <i class="fa-solid fa-comments"></i>
+          </div>
+          <div>
+            <h4 class="font-bold text-slate-900 text-sm">វេទិកាសួរ-ឆ្លើយមេរៀន (PLP Q&amp;A Forum)</h4>
+            <p class="text-[11px] text-slate-500">សិស្ស គ្រូ និងមាតាបិតាអាចពិភាក្សា សួរសំណួរលើមេរៀននេះ (${posts.length} មតិ)</p>
+          </div>
+        </div>
+      </div>
+
+      ${canPost ? `
+        <form onsubmit="handleForumPostSubmit(event, '${escapeHtml(item.id)}')" class="flex flex-col sm:flex-row gap-2">
+          <input
+            type="text"
+            name="forumMessage"
+            placeholder="សរសេរសំណួរ ឬមតិឆ្លើយតបអំពីមេរៀននេះ..."
+            class="flex-1 px-3.5 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-blue-900 focus:outline-none"
+            required
+          />
+          <button type="submit" class="px-4 py-2 rounded-xl bg-blue-900 hover:bg-blue-950 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 whitespace-nowrap">
+            <i class="fa-solid fa-paper-plane"></i>
+            <span>ផ្ញើមតិ</span>
+          </button>
+        </form>
+      ` : ''}
+
+      <div class="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+        ${posts.length === 0 ? `
+          <p class="text-xs text-slate-500 text-center py-4 bg-white rounded-xl border border-slate-200">
+            មិនទាន់មានសំណួរនៅក្នុងមេរៀននេះទេ។ ចាប់ផ្ដើមសួរសំណួរដំបូង!
+          </p>
+        ` : posts.map(post => {
+          const roleMeta = ROLE_META[post.userRole] || ROLE_META.student;
+          return `
+            <div class="p-3 rounded-xl bg-white border ${post.isResolved ? 'border-emerald-200' : 'border-slate-200'} text-xs space-y-1.5">
+              <div class="flex items-center justify-between gap-2 flex-wrap">
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-slate-900">${escapeHtml(post.userName)}</span>
+                  <span class="px-1.5 py-0.5 rounded-md text-[10px] font-bold border ${roleMeta.badge}">${escapeHtml(roleMeta.short)}</span>
+                  ${post.isResolved ? `<span class="px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold">✓ បានដោះស្រាយ</span>` : ''}
+                </div>
+                <div class="flex items-center gap-2 text-[10px] text-slate-400">
+                  <span>${escapeHtml(new Date(post.createdAt).toLocaleString())}</span>
+                  ${canModerate ? `
+                    <button type="button" onclick="toggleForumPostResolved('${escapeHtml(post.id)}', '${escapeHtml(item.id)}')" class="text-emerald-700 hover:underline font-bold">
+                      ${post.isResolved ? 'បើកវិញ' : 'ដាក់រួចរាល់'}
+                    </button>
+                    <button type="button" onclick="deleteForumPostItem('${escapeHtml(post.id)}', '${escapeHtml(item.id)}')" class="text-red-600 hover:underline font-bold">
+                      លុប
+                    </button>
+                  ` : ''}
+                </div>
+              </div>
+              <p class="text-slate-700 leading-relaxed">${escapeHtml(post.message)}</p>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function refreshDetailForum(itemId) {
+  const host = document.getElementById('detailForumSection');
+  const item = StorageManager.getItemById(itemId);
+  if (host && item) {
+    host.innerHTML = buildForumSectionHtml(item);
+  }
+}
+
+function handleForumPostSubmit(e, itemId) {
+  e.preventDefault();
+  const msg = e.target.forumMessage ? e.target.forumMessage.value.trim() : '';
+  if (!msg) return;
+  const created = StorageManager.addForumPost(itemId, msg);
+  if (created) {
+    showToast('បានផ្ញើមតិទៅក្នុងវេទិកាមេរៀន!', 'success');
+    refreshDetailForum(itemId);
+  }
+}
+
+function toggleForumPostResolved(postId, itemId) {
+  if (!StorageManager.hasPermission('moderate_forum')) return;
+  StorageManager.toggleForumResolved(postId);
+  refreshDetailForum(itemId);
+}
+
+function deleteForumPostItem(postId, itemId) {
+  if (!StorageManager.hasPermission('moderate_forum')) return;
+  StorageManager.deleteForumPost(postId);
+  showToast('បានលុបមតិពីវេទិកា!', 'info');
+  refreshDetailForum(itemId);
+}
+
+// ----------------- PLP HUB MODAL CONTROLLERS -----------------
+function openPlpHubModal(tab = state.plpTab || 'attendance') {
+  const user = StorageManager.getCurrentUser();
+  if (!user) {
+    openLoginModal();
+    showToast('សូមចូលប្រព័ន្ធ (Login) ជាមុនសិន!', 'info');
+    return;
+  }
+
+  closeAllModals();
+  state.plpTab = tab;
+  if (tab === 'mentoring' && !StorageManager.hasPermission('view_mentoring')) {
+    state.plpTab = 'attendance';
+  }
+
+  const modal = document.getElementById('plpHubModal');
+  if (modal) modal.classList.remove('hidden');
+  renderPlpHubModalContent();
+}
+
+function renderPlpHubModalContent() {
+  const container = document.getElementById('plpHubModalContent');
+  const user = StorageManager.getCurrentUser();
+  if (!container || !user) return;
+
+  const canMentoring = StorageManager.hasPermission('view_mentoring');
+  const activeTab = state.plpTab;
+
+  let bodyHtml = '';
+  if (activeTab === 'attendance') bodyHtml = buildPlpAttendanceTabHtml(user);
+  else if (activeTab === 'profiles') bodyHtml = buildPlpProfilesTabHtml(user);
+  else if (activeTab === 'analytics') bodyHtml = buildPlpAnalyticsTabHtml(user);
+  else if (activeTab === 'mentoring' && canMentoring) bodyHtml = buildPlpMentoringTabHtml(user);
+  else bodyHtml = buildPlpAttendanceTabHtml(user);
+
+  const tabBtn = (id, icon, label, activeColor) => {
+    const isActive = activeTab === id;
+    return `
+      <button
+        type="button"
+        onclick="openPlpHubModal('${id}')"
+        class="px-3.5 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap flex items-center gap-1.5 ${
+          isActive
+            ? `${activeColor} bg-slate-50`
+            : 'border-transparent text-slate-500 hover:text-slate-800'
+        }"
+      >
+        <i class="fa-solid ${icon}"></i>
+        <span>${label}</span>
+      </button>
+    `;
+  };
+
+  container.innerHTML = `
+    <div class="p-5 sm:p-6 border-b border-slate-200 bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-900 text-white flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-white/15 border border-white/25 flex items-center justify-center text-lg">
+          <i class="fa-solid fa-layer-group"></i>
+        </div>
+        <div>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-amber-300">ប្រព័ន្ធគ្រប់គ្រងស្តង់ដា PLP (MoEYS Style)</span>
+          <h3 class="text-base sm:text-lg font-black">សាលាអន្តរជាតិ ហេមតុន — មជ្ឈមណ្ឌលគ្រប់គ្រងប្រតិបត្តិការសាលា</h3>
+        </div>
+      </div>
+      <button onclick="closeAllModals()" class="w-9 h-9 rounded-xl bg-white/15 hover:bg-white/25 text-white flex items-center justify-center transition">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="px-5 pt-3 border-b border-slate-200 bg-white flex items-center gap-2 overflow-x-auto">
+      ${tabBtn('attendance', 'fa-clipboard-user', 'វត្តមានសិស្ស & គ្រូ', 'border-sky-600 text-sky-900')}
+      ${tabBtn('profiles', 'fa-qrcode', 'ប្រវត្តិសិស្ស សុខភាព & កាត QR', 'border-emerald-600 text-emerald-900')}
+      ${tabBtn('analytics', 'fa-chart-pie', 'វិភាគការសិក្សា & តារាងកិត្តិយស', 'border-amber-600 text-amber-900')}
+      ${canMentoring ? tabBtn('mentoring', 'fa-award', 'ប្រឹក្សាគរុកោសល្យ & ស្តង់ដាសាលាគំរូ', 'border-purple-700 text-purple-900') : ''}
+    </div>
+
+    <div class="p-5 sm:p-6 overflow-y-auto flex-1 space-y-5 bg-slate-50/40">
+      ${bodyHtml}
+    </div>
+  `;
+}
+
+// --- TAB 1: ATTENDANCE (STUDENT DAILY P/L/E/A + TEACHER SHIFT CHECK-IN) ---
+function setPlpAttDateGrade(dateVal, gradeVal) {
+  if (dateVal) state.plpAttDate = dateVal;
+  if (gradeVal) state.plpAttGrade = gradeVal;
+  renderPlpHubModalContent();
+}
+
+function buildPlpAttendanceTabHtml(user) {
+  const canManage = StorageManager.hasPermission('manage_attendance');
+  if (!canManage) {
+    const targetStudent = user.role === 'parent' ? StorageManager.getParentChild(user) : user;
+    if (!targetStudent) {
+      return `<div class="p-6 text-center bg-white rounded-2xl border border-slate-200 text-sm text-slate-500">មិនទាន់ភ្ជាប់គណនីសិស្សដើម្បីបង្ហាញវត្តមានឡើយ។</div>`;
+    }
+    const summary = StorageManager.getStudentAttendanceSummary(targetStudent.id);
+    return `
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h4 class="font-bold text-slate-900">កំណត់ត្រាវត្តមានប្រចាំថ្ងៃរបស់៖ ${escapeHtml(targetStudent.name)}</h4>
+            <p class="text-xs text-slate-500">កម្រិតថ្នាក់៖ ${escapeHtml(targetStudent.grade || 'ថ្នាក់ទី១')}</p>
+          </div>
+          <span class="px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-900 text-xs font-bold">
+            អត្រាមករៀន៖ ${summary.rate}% (${summary.total} ថ្ងៃកត់ត្រា)
+          </span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center text-xs">
+          <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-200"><strong class="block text-lg text-emerald-800">${summary.present}</strong>មករៀន (P)</div>
+          <div class="p-3 rounded-xl bg-amber-50 border border-amber-200"><strong class="block text-lg text-amber-800">${summary.late}</strong>មកយឺត (L)</div>
+          <div class="p-3 rounded-xl bg-blue-50 border border-blue-200"><strong class="block text-lg text-blue-800">${summary.excused}</strong>មានច្បាប់ (E)</div>
+          <div class="p-3 rounded-xl bg-rose-50 border border-rose-200"><strong class="block text-lg text-rose-800">${summary.absent}</strong>អវត្តមាន (A)</div>
+        </div>
+        ${summary.logs.length === 0
+          ? `<p class="text-xs text-slate-500 text-center py-6 bg-slate-50 rounded-xl">មិនទាន់មានកំណត់ត្រាវត្តមាននៅឡើយទេ។</p>`
+          : `<div class="overflow-x-auto rounded-xl border border-slate-200">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-100 text-slate-600 font-bold">
+                  <tr><th class="p-2.5">កាលបរិច្ឆេទ</th><th class="p-2.5">ថ្នាក់</th><th class="p-2.5">ស្ថានភាព</th><th class="p-2.5">កំណត់ចំណាំ</th></tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  ${summary.logs.map(l => {
+                    const meta = ATTENDANCE_STATUS_META[l.status] || ATTENDANCE_STATUS_META.P;
+                    return `<tr>
+                      <td class="p-2.5 font-mono">${escapeHtml(l.date)}</td>
+                      <td class="p-2.5">${escapeHtml(l.grade)}</td>
+                      <td class="p-2.5"><span class="px-2 py-0.5 rounded-full border text-[11px] font-bold ${meta.badge}">${escapeHtml(meta.short)}</span></td>
+                      <td class="p-2.5 text-slate-600">${escapeHtml(l.note || '—')}</td>
+                    </tr>`;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>`
+        }
+      </div>
+    `;
+  }
+
+  const date = state.plpAttDate || new Date().toISOString().slice(0, 10);
+  const grade = state.plpAttGrade || 'ថ្នាក់ទី១';
+  const existing = StorageManager.getAttendanceByDateGrade(date, grade);
+  const students = StorageManager.getUsers().filter(u => u.role === 'student' && (!grade || grade === 'all' || u.grade === grade));
+  const recMap = (existing && existing.records) || {};
+  const noteMap = (existing && existing.notes) || {};
+  const shiftInfo = (existing && existing.teacherShift) || {
+    teacherName: user.name,
+    shift: 'វេនព្រឹក (07:30 - 11:00)',
+    checkIn: '07:25'
+  };
+
+  return `
+    <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 space-y-4">
+      <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">កាលបរិច្ឆេទ</label>
+          <input type="date" id="attDatePicker" value="${escapeHtml(date)}" onchange="setPlpAttDateGrade(this.value, null)" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white font-semibold" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">កម្រិតថ្នាក់</label>
+          <select id="attGradePicker" onchange="setPlpAttDateGrade(null, this.value)" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white font-semibold">
+            ${ALL_GRADES.map(g => `<option value="${escapeHtml(g)}" ${g === grade ? 'selected' : ''}>${escapeHtml(g)}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">វេនបង្រៀនគ្រូ</label>
+          <input type="text" id="attTeacherShiftInput" value="${escapeHtml(shiftInfo.shift)}" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">ម៉ោងគ្រូចូលបង្រៀន (Check-In)</label>
+          <input type="text" id="attTeacherCheckIn" value="${escapeHtml(shiftInfo.checkIn)}" placeholder="07:25" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white font-mono" />
+        </div>
+      </div>
+
+      ${students.length === 0 ? `
+        <div class="p-6 text-center bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-500">
+          មិនទាន់មានគណនីសិស្សក្នុងថ្នាក់ "${escapeHtml(grade)}" នៅឡើយទេ។ សូមបង្កើតសិស្សក្នុងផ្ទាំង "គ្រប់គ្រងសិស្ស" ឬជ្រើសថ្នាក់ទី១!
+        </div>
+      ` : `
+        <form onsubmit="savePlpAttendanceForm(event)" class="space-y-3">
+          <div class="overflow-x-auto rounded-2xl border border-slate-200">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-100 text-slate-600 font-bold border-b border-slate-200">
+                <tr>
+                  <th class="p-3">#</th>
+                  <th class="p-3">ឈ្មោះសិស្ស</th>
+                  <th class="p-3">ស្ថានភាព (P / L / E / A)</th>
+                  <th class="p-3">កំណត់ចំណាំ</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                ${students.map((st, idx) => {
+                  const curr = recMap[st.id] || 'P';
+                  return `
+                    <tr class="hover:bg-slate-50/70">
+                      <td class="p-3 font-mono text-slate-400">${idx + 1}</td>
+                      <td class="p-3">
+                        <p class="font-bold text-slate-900">${escapeHtml(st.name)}</p>
+                        <p class="text-[10px] text-slate-500 font-mono">${escapeHtml(StorageManager.getUserQrToken(st))}</p>
+                      </td>
+                      <td class="p-3">
+                        <div class="flex flex-wrap gap-1.5">
+                          ${Object.keys(ATTENDANCE_STATUS_META).map(code => {
+                            const m = ATTENDANCE_STATUS_META[code];
+                            return `
+                              <label class="cursor-pointer">
+                                <input type="radio" name="att_status_${escapeHtml(st.id)}" value="${code}" ${curr === code ? 'checked' : ''} class="peer sr-only" />
+                                <span class="inline-block px-2.5 py-1 rounded-lg border text-[11px] font-bold bg-white text-slate-600 border-slate-200 ${m.peerBtn} transition">
+                                  ${escapeHtml(m.short)}
+                                </span>
+                              </label>
+                            `;
+                          }).join('')}
+                        </div>
+                      </td>
+                      <td class="p-3">
+                        <input type="text" name="att_note_${escapeHtml(st.id)}" value="${escapeHtml(noteMap[st.id] || '')}" placeholder="មូលហេតុ ឬកំណត់ចំណាំ..." class="w-full min-w-[150px] px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 focus:ring-2 focus:ring-sky-600 focus:outline-none" />
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2">
+            <span class="text-[11px] text-slate-500">
+              ${existing ? `កែសម្រួលចុងក្រោយដោយ ${escapeHtml(existing.updatedBy)}` : 'មិនទាន់កត់ត្រាវត្តមានសម្រាប់ថ្ងៃនេះនៅឡើយទេ'}
+            </span>
+            <button type="submit" class="px-5 py-2 rounded-xl bg-sky-700 hover:bg-sky-800 text-white text-xs font-bold shadow-xs transition flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-floppy-disk"></i>
+              <span>រក្សាទុកវត្តមានថ្ងៃនេះ</span>
+            </button>
+          </div>
+        </form>
+      `}
+    </div>
+  `;
+}
+
+function savePlpAttendanceForm(e) {
+  e.preventDefault();
+  if (!StorageManager.hasPermission('manage_attendance')) return;
+  const form = e.target;
+  const date = state.plpAttDate || new Date().toISOString().slice(0, 10);
+  const grade = state.plpAttGrade || 'ថ្នាក់ទី១';
+  const students = StorageManager.getUsers().filter(u => u.role === 'student' && u.grade === grade);
+  const records = {};
+  const notes = {};
+
+  students.forEach(st => {
+    const checked = form.querySelector(`input[name="att_status_${st.id}"]:checked`);
+    const noteEl = form.querySelector(`input[name="att_note_${st.id}"]`);
+    records[st.id] = checked ? checked.value : 'P';
+    notes[st.id] = noteEl ? noteEl.value.trim() : '';
+  });
+
+  const shiftEl = document.getElementById('attTeacherShiftInput');
+  const checkInEl = document.getElementById('attTeacherCheckIn');
+  const currUser = StorageManager.getCurrentUser();
+
+  StorageManager.saveAttendanceRecord({
+    date,
+    grade,
+    records,
+    notes,
+    teacherShift: {
+      teacherId: currUser ? currUser.id : 'teacher',
+      teacherName: currUser ? currUser.name : 'គ្រូបង្រៀន',
+      shift: shiftEl ? shiftEl.value.trim() : 'វេនព្រឹក',
+      checkIn: checkInEl ? checkInEl.value.trim() : '07:30',
+      status: 'on_time'
+    }
+  });
+
+  showToast(`បានរក្សាទុកវត្តមានថ្នាក់ ${grade} ថ្ងៃ ${date} រួចរាល់!`, 'success');
+  renderPlpRoleBar();
+  renderPlpHubModalContent();
+}
+
+// --- TAB 2: STUDENT DIRECTORY, HEALTH PROFILES & QR PASS ---
+function setPlpProfileGrade(gradeVal) {
+  state.plpProfileGrade = gradeVal || 'all';
+  state.editingProfileUserId = null;
+  renderPlpHubModalContent();
+}
+
+function toggleEditStudentProfileForm(userId) {
+  state.editingProfileUserId = state.editingProfileUserId === userId ? null : userId;
+  renderPlpHubModalContent();
+}
+
+function saveStudentProfileInline(e, userId) {
+  e.preventDefault();
+  if (!StorageManager.hasPermission('manage_student_profiles')) return;
+  const f = e.target;
+  StorageManager.saveStudentProfile(userId, {
+    studentCode: f.spCode.value.trim(),
+    gender: f.spGender.value.trim(),
+    dob: f.spDob.value.trim(),
+    guardianName: f.spGuardian.value.trim(),
+    guardianPhone: f.spPhone.value.trim(),
+    bloodGroup: f.spBlood.value.trim(),
+    allergies: f.spAllergies.value.trim(),
+    healthNotes: f.spHealth.value.trim(),
+    behaviorNote: f.spBehavior.value.trim()
+  });
+  state.editingProfileUserId = null;
+  showToast('បានរក្សាទុកប្រវត្តិ និងព័ត៌មានសុខភាពសិស្សដោយជោគជ័យ!', 'success');
+  renderPlpHubModalContent();
+}
+
+function copyQrCodeText(code) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(code).catch(() => {});
+  }
+  showToast(`បានចម្លងកូដ QR (${code}) — អាចប្រើសម្រាប់ស្កេនចូលប្រព័ន្ធសិស្ស!`, 'success');
+}
+
+function buildPlpProfilesTabHtml(user) {
+  const canEdit = StorageManager.hasPermission('manage_student_profiles');
+  let students = StorageManager.getUsers().filter(u => u.role === 'student');
+
+  if (user.role === 'student') {
+    students = students.filter(s => s.id === user.id);
+  } else if (user.role === 'parent') {
+    const child = StorageManager.getParentChild(user);
+    students = child ? [child] : [];
+  } else if (state.plpProfileGrade && state.plpProfileGrade !== 'all') {
+    students = students.filter(s => s.grade === state.plpProfileGrade);
+  }
+
+  return `
+    <div class="space-y-4">
+      ${canEdit ? `
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h4 class="font-bold text-slate-900 text-sm">បញ្ជីប្រវត្តិសិស្ស ព័ត៌មានសុខភាព និងកាត QR ចូលរៀន (SIS)</h4>
+            <p class="text-xs text-slate-500">គ្រូ ប្រធានផ្នែក និង Admin អាចកែប្រែព័ត៌មានសុខភាព ទំនាក់ទំនងបន្ទាន់ និងចម្លងកាត QR សិស្ស</p>
+          </div>
+          <select onchange="setPlpProfileGrade(this.value)" class="px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white font-semibold">
+            <option value="all" ${state.plpProfileGrade === 'all' ? 'selected' : ''}>គ្រប់កម្រិតថ្នាក់</option>
+            ${ALL_GRADES.map(g => `<option value="${escapeHtml(g)}" ${state.plpProfileGrade === g ? 'selected' : ''}>${escapeHtml(g)}</option>`).join('')}
+          </select>
+        </div>
+      ` : ''}
+
+      ${students.length === 0 ? `
+        <div class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-sm text-slate-500">មិនមានទិន្នន័យសិស្សសម្រាប់បង្ហាញទេ។</div>
+      ` : `
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          ${students.map(st => {
+            const p = StorageManager.getStudentProfile(st.id);
+            const qrToken = StorageManager.getUserQrToken(st);
+            const att = StorageManager.getStudentAttendanceSummary(st.id);
+            const isEditing = canEdit && state.editingProfileUserId === st.id;
+
+            return `
+              <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 space-y-4 shadow-2xs">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-center gap-3 min-w-0">
+                    ${generateQrSvg(qrToken, 84)}
+                    <div class="min-w-0">
+                      <span class="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold font-mono">${escapeHtml(p.studentCode || qrToken)}</span>
+                      <h5 class="font-black text-slate-900 text-base truncate mt-1">${escapeHtml(st.name)}</h5>
+                      <p class="text-xs text-slate-600">${escapeHtml(st.grade || 'ទូទៅ')} • ភេទ៖ ${escapeHtml(p.gender || 'មិនទាន់កំណត់')}</p>
+                      <div class="flex flex-wrap gap-1.5 mt-2">
+                        <button type="button" onclick="copyQrCodeText('${escapeHtml(qrToken)}')" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition flex items-center gap-1">
+                          <i class="fa-solid fa-copy"></i> ${escapeHtml(qrToken)}
+                        </button>
+                        ${canEdit ? `
+                          <button type="button" onclick="toggleEditStudentProfileForm('${escapeHtml(st.id)}')" class="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-900 text-[11px] font-bold transition border border-blue-200">
+                            <i class="fa-solid fa-pen"></i> ${isEditing ? 'បិទ' : 'កែសុខភាព/ប្រវត្តិ'}
+                          </button>
+                        ` : ''}
+                      </div>
+                    </div>
+                  </div>
+                  <span class="px-2.5 py-1 rounded-xl bg-sky-50 border border-sky-200 text-sky-900 text-[11px] font-bold flex-shrink-0">
+                    វត្តមាន ${att.rate}%
+                  </span>
+                </div>
+
+                ${isEditing ? `
+                  <form onsubmit="saveStudentProfileInline(event, '${escapeHtml(st.id)}')" class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                    <div>
+                      <label class="font-bold text-slate-700">អត្តលេខសិស្ស (ID)</label>
+                      <input name="spCode" value="${escapeHtml(p.studentCode || '')}" placeholder="HPT-01-001" class="w-full mt-0.5 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white" />
+                    </div>
+                    <div>
+                      <label class="font-bold text-slate-700">ភេទ / ថ្ងៃកំណើត</label>
+                      <div class="flex gap-1.5 mt-0.5">
+                        <input name="spGender" value="${escapeHtml(p.gender || '')}" placeholder="ប្រុស/ស្រី" class="w-20 px-2 py-1.5 rounded-lg border border-slate-300 bg-white" />
+                        <input name="spDob" type="date" value="${escapeHtml(p.dob || '')}" class="flex-1 px-2 py-1.5 rounded-lg border border-slate-300 bg-white" />
+                      </div>
+                    </div>
+                    <div>
+                      <label class="font-bold text-slate-700">អាណាព្យាបាល</label>
+                      <input name="spGuardian" value="${escapeHtml(p.guardianName || '')}" placeholder="ឈ្មោះមាតាបិតា" class="w-full mt-0.5 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white" />
+                    </div>
+                    <div>
+                      <label class="font-bold text-slate-700">ទូរស័ព្ទបន្ទាន់</label>
+                      <input name="spPhone" value="${escapeHtml(p.guardianPhone || st.phone || '')}" placeholder="012 345 678" class="w-full mt-0.5 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white" />
+                    </div>
+                    <div>
+                      <label class="font-bold text-slate-700">ក្រុមឈាម</label>
+                      <input name="spBlood" value="${escapeHtml(p.bloodGroup || '')}" placeholder="O+, A+, B+" class="w-full mt-0.5 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white" />
+                    </div>
+                    <div>
+                      <label class="font-bold text-slate-700">ប្រតិកម្មអាឡ័កស៊ី</label>
+                      <input name="spAllergies" value="${escapeHtml(p.allergies || '')}" placeholder="គ្មាន ឬបញ្ជាក់..." class="w-full mt-0.5 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white" />
+                    </div>
+                    <div class="sm:col-span-2">
+                      <label class="font-bold text-slate-700">កំណត់ត្រាសុខភាពសិស្ស</label>
+                      <input name="spHealth" value="${escapeHtml(p.healthNotes || '')}" placeholder="ស្ថានភាពភ្នែក ធ្មេញ វ៉ាក់សាំង..." class="w-full mt-0.5 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white" />
+                    </div>
+                    <div class="sm:col-span-2">
+                      <label class="font-bold text-slate-700">កំណត់ត្រាវិន័យ &amp; ការចូលរួម</label>
+                      <input name="spBehavior" value="${escapeHtml(p.behaviorNote || '')}" placeholder="អាកប្បកិរិយាក្នុងថ្នាក់..." class="w-full mt-0.5 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white" />
+                    </div>
+                    <div class="sm:col-span-2 flex justify-end gap-2 pt-1">
+                      <button type="button" onclick="toggleEditStudentProfileForm('${escapeHtml(st.id)}')" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 font-bold">បោះបង់</button>
+                      <button type="submit" class="px-4 py-1.5 rounded-lg bg-emerald-600 text-white font-bold">រក្សាទុក</button>
+                    </div>
+                  </form>
+                ` : `
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <div><span class="text-slate-500">អាណាព្យាបាល៖</span> <strong>${escapeHtml(p.guardianName || '—')}</strong></div>
+                    <div><span class="text-slate-500">ទូរស័ព្ទបន្ទាន់៖</span> <strong>${escapeHtml(p.guardianPhone || st.phone || '—')}</strong></div>
+                    <div><span class="text-slate-500">ក្រុមឈាម / ប្រតិកម្ម៖</span> <strong class="text-rose-700">${escapeHtml(p.bloodGroup || '—')} • ${escapeHtml(p.allergies || 'គ្មាន')}</strong></div>
+                    <div><span class="text-slate-500">ថ្ងៃកំណើត៖</span> <strong>${escapeHtml(p.dob || '—')}</strong></div>
+                    <div class="sm:col-span-2"><span class="text-slate-500">កំណត់ត្រាសុខភាព៖</span> <span class="text-slate-800">${escapeHtml(p.healthNotes || 'មិនទាន់មានកំណត់ត្រា')}</span></div>
+                    <div class="sm:col-span-2"><span class="text-slate-500">វិន័យ &amp; អាកប្បកិរិយា៖</span> <span class="text-slate-800">${escapeHtml(p.behaviorNote || 'មិនទាន់មានកំណត់ត្រា')}</span></div>
+                  </div>
+                `}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `}
+    </div>
+  `;
+}
+
+// --- TAB 3: PLP LEARNING ANALYTICS, HONOR ROLL, AT-RISK ALERTS & MISSED QUESTIONS ---
+function setPlpAnalyticsFilters(gradeVal, typeVal) {
+  if (gradeVal !== null) state.plpAnalyticsGrade = gradeVal;
+  if (typeVal !== null) state.plpAnalyticsType = typeVal;
+  renderPlpHubModalContent();
+}
+
+function buildPlpAnalyticsTabHtml(user) {
+  const analytics = StorageManager.getPlpAnalytics({
+    grade: state.plpAnalyticsGrade || 'all',
+    assessmentType: state.plpAnalyticsType || 'all'
+  });
+
+  const isStaff = StorageManager.hasPermission('view_analytics');
+  const child = user.role === 'parent' ? StorageManager.getParentChild(user) : null;
+
+  return `
+    <div class="space-y-5">
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h4 class="font-bold text-slate-900 text-sm">ផ្ទាំងវិភាគការសិក្សា PLP &amp; តារាងកិត្តិយស</h4>
+          <p class="text-xs text-slate-500">តាមដានតាមប្រភេទប្រឡង (តាមមេរៀន / ប្រចាំខែ / ឆមាស), សិស្សត្រូវការជំនួយ និងសំណួរដែលសិស្សខុសញឹកញាប់</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <select onchange="setPlpAnalyticsFilters(this.value, null)" class="px-3 py-1.5 text-xs rounded-xl border border-slate-300 bg-white font-semibold">
+            <option value="all" ${state.plpAnalyticsGrade === 'all' ? 'selected' : ''}>គ្រប់ថ្នាក់</option>
+            ${ALL_GRADES.map(g => `<option value="${escapeHtml(g)}" ${state.plpAnalyticsGrade === g ? 'selected' : ''}>${escapeHtml(g)}</option>`).join('')}
+          </select>
+          <select onchange="setPlpAnalyticsFilters(null, this.value)" class="px-3 py-1.5 text-xs rounded-xl border border-slate-300 bg-white font-semibold">
+            <option value="all" ${state.plpAnalyticsType === 'all' ? 'selected' : ''}>គ្រប់ប្រភេទវាយតម្លៃ</option>
+            ${Object.values(ASSESSMENT_TYPES).map(t => `<option value="${t.id}" ${state.plpAnalyticsType === t.id ? 'selected' : ''}>${escapeHtml(t.label)}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+        <div class="p-3.5 rounded-2xl bg-white border border-slate-200">
+          <span class="block text-2xl font-black text-blue-900">${analytics.totalStudents}</span>
+          <span class="text-xs text-slate-500">សិស្សសរុប</span>
+        </div>
+        <div class="p-3.5 rounded-2xl bg-white border border-slate-200">
+          <span class="block text-2xl font-black text-emerald-700">${analytics.totalQuizAttempts}</span>
+          <span class="text-xs text-slate-500">ដងប្រឡង / Quiz</span>
+        </div>
+        <div class="p-3.5 rounded-2xl bg-white border border-slate-200">
+          <span class="block text-2xl font-black text-indigo-700">${analytics.totalSubmissions}</span>
+          <span class="text-xs text-slate-500">កិច្ចការផ្ទះប្រគល់</span>
+        </div>
+        <div class="p-3.5 rounded-2xl bg-rose-50 border border-rose-200">
+          <span class="block text-2xl font-black text-rose-700">${analytics.atRiskStudents.length}</span>
+          <span class="text-xs text-rose-700 font-bold">សិស្សត្រូវការជំនួយ</span>
+        </div>
+      </div>
+
+      <!-- Honor Roll -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 space-y-3">
+        <h5 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+          <i class="fa-solid fa-trophy text-amber-500"></i>
+          តារាងកិត្តិយសប្រចាំសាលា (Honor Roll — ចំណាត់ថ្នាក់សរុប)
+        </h5>
+        <div class="overflow-x-auto rounded-xl border border-slate-200">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-100 text-slate-600 font-bold">
+              <tr>
+                <th class="p-2.5">ចំណាត់ថ្នាក់</th>
+                <th class="p-2.5">ឈ្មោះសិស្ស</th>
+                <th class="p-2.5">មធ្យម Quiz</th>
+                <th class="p-2.5">កិច្ចការផ្ទះ</th>
+                <th class="p-2.5">វត្តមាន</th>
+                <th class="p-2.5">មើលមេរៀន</th>
+                <th class="p-2.5">ពិន្ទុសរុប PLP</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              ${analytics.honorRoll.map((row, idx) => {
+                const highlight = (user.role === 'student' && row.student.id === user.id) || (child && row.student.id === child.id);
+                const medal = idx === 0 ? '🥇 ទី១' : idx === 1 ? '🥈 ទី២' : idx === 2 ? '🥉 ទី៣' : `#${idx + 1}`;
+                return `
+                  <tr class="${highlight ? 'bg-amber-50/80 font-bold' : ''}">
+                    <td class="p-2.5 font-bold">${medal}</td>
+                    <td class="p-2.5">${escapeHtml(row.student.name)} <span class="text-[10px] text-slate-400">(${escapeHtml(row.student.grade)})</span></td>
+                    <td class="p-2.5">${row.quizAvg !== null ? `${row.quizAvg}% (${row.quizCount})` : '—'}</td>
+                    <td class="p-2.5">${row.hwAvg !== null ? `${row.hwAvg}% (${row.hwCount})` : '—'}</td>
+                    <td class="p-2.5">${row.attendanceRate}%</td>
+                    <td class="p-2.5">${row.lessonViews} ដង</td>
+                    <td class="p-2.5"><span class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 font-black">${row.composite}%</span></td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      ${isStaff ? `
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div class="bg-white rounded-2xl border border-rose-200 p-4 space-y-2.5">
+            <h5 class="font-bold text-rose-900 text-sm flex items-center gap-2">
+              <i class="fa-solid fa-triangle-exclamation text-rose-600"></i>
+              សិស្សត្រូវការជំនួយបំប៉ន (At-Risk Alerts)
+            </h5>
+            ${analytics.atRiskStudents.length === 0 ? `
+              <p class="text-xs text-emerald-700 bg-emerald-50 p-3 rounded-xl">សិស្សទាំងអស់កំពុងមានវឌ្ឍនភាពល្អ!</p>
+            ` : analytics.atRiskStudents.map(row => `
+              <div class="p-3 rounded-xl bg-rose-50/60 border border-rose-100 text-xs flex items-center justify-between gap-2">
+                <div>
+                  <p class="font-bold text-slate-900">${escapeHtml(row.student.name)} (${escapeHtml(row.student.grade)})</p>
+                  <p class="text-[11px] text-rose-700">
+                    ${row.quizAvg !== null && row.quizAvg < 60 ? `ពិន្ទុ Quiz ទាប (${row.quizAvg}%) ` : ''}
+                    ${row.attendanceTotal > 0 && row.attendanceRate < 80 ? `អវត្តមានញឹកញាប់ (មក ${row.attendanceRate}%) ` : ''}
+                    ${row.quizCount === 0 && row.hwCount === 0 ? 'មិនទាន់មានកំណត់ត្រាធ្វើលំហាត់ ឬកិច្ចការ' : ''}
+                  </p>
+                </div>
+                <button type="button" onclick="openPlpHubModal('profiles')" class="px-2.5 py-1 rounded-lg bg-white border border-rose-200 text-rose-800 text-[11px] font-bold flex-shrink-0">
+                  មើលទំនាក់ទំនង
+                </button>
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="bg-white rounded-2xl border border-amber-200 p-4 space-y-2.5">
+            <h5 class="font-bold text-amber-950 text-sm flex items-center gap-2">
+              <i class="fa-solid fa-magnifying-glass-chart text-amber-600"></i>
+              សំណួរដែលសិស្សធ្វើខុសញឹកញាប់ (Reteach Insights)
+            </h5>
+            ${analytics.missedQuestions.length === 0 ? `
+              <p class="text-xs text-slate-500 bg-slate-50 p-3 rounded-xl">នៅពេលសិស្សធ្វើតេស្តខុសសំណួរណាមួយ ប្រព័ន្ធនឹងវិភាគសំណួរនោះនៅទីនេះដោយស្វ័យប្រវត្តិ។</p>
+            ` : analytics.missedQuestions.slice(0, 6).map(mq => `
+              <div class="p-3 rounded-xl bg-amber-50/60 border border-amber-100 text-xs flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                  <p class="font-bold text-slate-900 truncate">${escapeHtml(mq.itemTitle)}</p>
+                  <p class="text-slate-700 mt-0.5">${escapeHtml(mq.questionText)}</p>
+                </div>
+                <span class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 font-bold text-[11px] flex-shrink-0">ខុស ${mq.missCount} ដង</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+// --- TAB 4: PEDAGOGICAL MENTORING & MODEL SCHOOL STANDARDS (HEAD / ADMIN / TEACHER) ---
+function handleMentoringSubmit(e) {
+  e.preventDefault();
+  if (!StorageManager.hasPermission('manage_mentoring')) return;
+  const f = e.target;
+  const teacherUser = StorageManager.getUsers().find(u => u.id === f.mentTeacherId.value);
+  StorageManager.addMentoringObservation({
+    teacherId: f.mentTeacherId.value,
+    teacherName: teacherUser ? teacherUser.name : 'គ្រូបង្រៀន',
+    date: f.mentDate.value,
+    grade: f.mentGrade.value,
+    subject: f.mentSubject.value.trim(),
+    scores: {
+      lessonPlan: Number(f.mentPlan.value),
+      teachingMethod: Number(f.mentMethod.value),
+      engagement: Number(f.mentEngage.value),
+      assessment: Number(f.mentAssess.value)
+    },
+    strengths: f.mentStrengths.value,
+    recommendations: f.mentRecommendations.value
+  });
+  showToast('បានរក្សាទុកកំណត់ត្រាប្រឹក្សាគរុកោសល្យគ្រូ!', 'success');
+  renderPlpRoleBar();
+  renderPlpHubModalContent();
+}
+
+function saveModelSchoolStandardRow(standardId) {
+  if (!StorageManager.hasPermission('manage_mentoring')) return;
+  const scoreEl = document.getElementById(`stdScore_${standardId}`);
+  const evEl = document.getElementById(`stdEvidence_${standardId}`);
+  if (!scoreEl || !evEl) return;
+  StorageManager.saveSchoolStandard(standardId, Number(scoreEl.value), evEl.value);
+  showToast('បានធ្វើបច្ចុប្បន្នភាពពិន្ទុស្តង់ដាសាលាគំរូ!', 'success');
+  renderPlpRoleBar();
+  renderPlpHubModalContent();
+}
+
+function buildPlpMentoringTabHtml(user) {
+  const canManage = StorageManager.hasPermission('manage_mentoring');
+  const data = StorageManager.getMentoringData();
+  const teachers = StorageManager.getUsers().filter(u => u.role === 'teacher');
+  const observations = canManage
+    ? (data.observations || [])
+    : (data.observations || []).filter(o => o.teacherId === user.id || o.teacherName === user.name);
+
+  const standardsMap = data.standards || {};
+  const standardsTotal = MODEL_SCHOOL_STANDARDS.reduce((sum, st) => sum + ((standardsMap[st.id] && standardsMap[st.id].score) || 0), 0);
+  const standardsPct = Math.round((standardsTotal / (MODEL_SCHOOL_STANDARDS.length * 5)) * 100);
+
+  return `
+    <div class="space-y-5">
+      <!-- Model School Standards 5 Pillars -->
+      <div class="bg-white rounded-2xl border border-purple-200 p-4 sm:p-5 space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h4 class="font-bold text-purple-950 text-sm flex items-center gap-2">
+              <i class="fa-solid fa-school-circle-check text-purple-700"></i>
+              អធិការកិច្ច &amp; ស្តង់ដាសាលាគំរូ ៥ ចំណុច (MoEYS Model School Standards)
+            </h4>
+            <p class="text-xs text-slate-500">ពិន្ទុវាយតម្លៃគុណភាពសាលាប្រចាំឆមាស (កម្រិត ១ ដល់ ៥)</p>
+          </div>
+          <span class="px-3.5 py-1.5 rounded-xl bg-purple-100 text-purple-900 text-xs font-black">
+            ពិន្ទុរួម៖ ${standardsPct}% (${standardsTotal}/${MODEL_SCHOOL_STANDARDS.length * 5})
+          </span>
+        </div>
+
+        <div class="space-y-2.5">
+          ${MODEL_SCHOOL_STANDARDS.map(st => {
+            const cur = standardsMap[st.id] || { score: 4, evidence: '' };
+            return `
+              <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-3 text-xs">
+                <div class="flex-1 min-w-0">
+                  <p class="font-bold text-slate-900">${escapeHtml(st.title)}</p>
+                  <p class="text-[11px] text-slate-500 mt-0.5">${escapeHtml(st.description)}</p>
+                </div>
+                ${canManage ? `
+                  <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <select id="stdScore_${escapeHtml(st.id)}" class="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white font-bold">
+                      ${[1, 2, 3, 4, 5].map(n => `<option value="${n}" ${cur.score === n ? 'selected' : ''}>${n} / 5 ពិន្ទុ</option>`).join('')}
+                    </select>
+                    <input id="stdEvidence_${escapeHtml(st.id)}" value="${escapeHtml(cur.evidence || '')}" placeholder="ភស្តុតាង / កំណត់សម្គាល់..." class="w-full sm:w-56 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white" />
+                    <button type="button" onclick="saveModelSchoolStandardRow('${escapeHtml(st.id)}')" class="px-3 py-1.5 rounded-lg bg-purple-700 hover:bg-purple-800 text-white font-bold whitespace-nowrap">
+                      រក្សាទុក
+                    </button>
+                  </div>
+                ` : `
+                  <div class="text-right">
+                    <span class="px-2.5 py-1 rounded-full bg-purple-100 text-purple-900 font-bold">${cur.score} / 5</span>
+                    <p class="text-[11px] text-slate-600 mt-1">${escapeHtml(cur.evidence || '')}</p>
+                  </div>
+                `}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- Teacher Pedagogical Mentoring Form (Head/Admin Only) -->
+      ${canManage && teachers.length > 0 ? `
+        <form onsubmit="handleMentoringSubmit(event)" class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 space-y-3 text-xs">
+          <h4 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+            <i class="fa-solid fa-chalkboard-user text-blue-900"></i>
+            កត់ត្រាការចុះប្រឹក្សាគរុកោសល្យគ្រូបង្រៀន (New Classroom Observation)
+          </h4>
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div>
+              <label class="font-bold text-slate-700">គ្រូបង្រៀន *</label>
+              <select name="mentTeacherId" class="w-full mt-1 px-2.5 py-2 rounded-xl border border-slate-300 bg-white font-semibold" required>
+                ${teachers.map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label class="font-bold text-slate-700">កាលបរិច្ឆេទ</label>
+              <input name="mentDate" type="date" value="${escapeHtml(new Date().toISOString().slice(0, 10))}" class="w-full mt-1 px-2.5 py-2 rounded-xl border border-slate-300 bg-white" required />
+            </div>
+            <div>
+              <label class="font-bold text-slate-700">កម្រិតថ្នាក់</label>
+              <select name="mentGrade" class="w-full mt-1 px-2.5 py-2 rounded-xl border border-slate-300 bg-white">
+                ${ALL_GRADES.map(g => `<option value="${escapeHtml(g)}">${escapeHtml(g)}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label class="font-bold text-slate-700">មុខវិជ្ជា</label>
+              <input name="mentSubject" value="ភាសាខ្មែរ" class="w-full mt-1 px-2.5 py-2 rounded-xl border border-slate-300 bg-white" required />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+            <div>
+              <label class="font-bold text-slate-700">កិច្ចតែងការ (1-5)</label>
+              <input name="mentPlan" type="number" min="1" max="5" value="5" class="w-full mt-1 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white" required />
+            </div>
+            <div>
+              <label class="font-bold text-slate-700">វិធីសាស្ត្របង្រៀន (1-5)</label>
+              <input name="mentMethod" type="number" min="1" max="5" value="4" class="w-full mt-1 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white" required />
+            </div>
+            <div>
+              <label class="font-bold text-slate-700">សកម្មភាពសិស្ស (1-5)</label>
+              <input name="mentEngage" type="number" min="1" max="5" value="5" class="w-full mt-1 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white" required />
+            </div>
+            <div>
+              <label class="font-bold text-slate-700">ការវាយតម្លៃ (1-5)</label>
+              <input name="mentAssess" type="number" min="1" max="5" value="4" class="w-full mt-1 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white" required />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="font-bold text-slate-700">ចំណុចខ្លាំងរបស់គ្រូ</label>
+              <textarea name="mentStrengths" rows="2" placeholder="សង្ខេបចំណុចល្អក្នុងការបង្រៀន..." class="w-full mt-1 px-3 py-2 rounded-xl border border-slate-300 bg-white" required></textarea>
+            </div>
+            <div>
+              <label class="font-bold text-slate-700">អនុសាសន៍កែលម្អបន្ថែម</label>
+              <textarea name="mentRecommendations" rows="2" placeholder="ណែនាំវិធីសាស្ត្របង្រៀនបន្ថែម..." class="w-full mt-1 px-3 py-2 rounded-xl border border-slate-300 bg-white" required></textarea>
+            </div>
+          </div>
+
+          <div class="flex justify-end">
+            <button type="submit" class="px-4 py-2 rounded-xl bg-blue-900 hover:bg-blue-950 text-white font-bold shadow-xs transition flex items-center gap-1.5">
+              <i class="fa-solid fa-plus-circle"></i>
+              <span>រក្សាទុកកំណត់ត្រាប្រឹក្សា</span>
+            </button>
+          </div>
+        </form>
+      ` : ''}
+
+      <!-- Past Observations List -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 space-y-3">
+        <h4 class="font-bold text-slate-900 text-sm">ប្រវត្តិប្រឹក្សាគរុកោសល្យ (${observations.length})</h4>
+        ${observations.length === 0 ? `
+          <p class="text-xs text-slate-500 text-center py-6 bg-slate-50 rounded-xl">មិនទាន់មានកំណត់ត្រាប្រឹក្សាគរុកោសល្យនៅឡើយទេ។</p>
+        ` : observations.map(obs => `
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-2">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <p class="font-black text-slate-900 text-sm">${escapeHtml(obs.teacherName)} • ${escapeHtml(obs.grade)} (${escapeHtml(obs.subject)})</p>
+                <p class="text-[11px] text-slate-500">អ្នកប្រឹក្សា៖ ${escapeHtml(obs.evaluatorName)} • ថ្ងៃទី ${escapeHtml(obs.date)}</p>
+              </div>
+              <span class="px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 font-black self-start sm:self-auto">
+                ពិន្ទុគរុកោសល្យ៖ ${obs.totalPercent}%
+              </span>
+            </div>
+            <p class="text-emerald-900"><strong>ចំណុចខ្លាំង៖</strong> ${escapeHtml(obs.strengths)}</p>
+            <p class="text-amber-900"><strong>អនុសាសន៍៖</strong> ${escapeHtml(obs.recommendations)}</p>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}

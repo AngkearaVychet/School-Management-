@@ -12,7 +12,11 @@ const STORAGE_KEYS = {
   QUIZ_HISTORY: 'hampton_eduhub_quiz_history_v2',
   HOMEWORK_SUBMISSIONS: 'hampton_eduhub_homeworks_v2',
   FEATURED_MEDIA: 'hampton_eduhub_featured_media_v2',
-  ACTIVITY_LOGS: 'hampton_eduhub_activity_logs_v3'
+  ACTIVITY_LOGS: 'hampton_eduhub_activity_logs_v3',
+  ATTENDANCE: 'hampton_eduhub_attendance_v3',
+  STUDENT_PROFILES: 'hampton_eduhub_student_profiles_v3',
+  FORUM_POSTS: 'hampton_eduhub_forum_v3',
+  MENTORING_EVALS: 'hampton_eduhub_mentoring_v3'
 };
 
 // ព័ត៌មានតួនាទីទាំង ៥ ក្នុងប្រព័ន្ធ (Single Source of Truth)
@@ -252,6 +256,31 @@ const StorageManager = {
       this.recordActivity('logout', 'ចាកចេញពីប្រព័ន្ធ');
     }
     localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+  },
+
+  getUserQrToken(user) {
+    if (!user) return '';
+    if (user.qrToken) return user.qrToken;
+    const uname = String(user.username || user.id || 'USER').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    return `HPT-QR-${uname}`;
+  },
+
+  loginWithQrToken(code) {
+    const clean = String(code || '').trim().toUpperCase();
+    if (!clean) {
+      return { success: false, message: 'សូមបញ្ចូល ឬស្កេនកូដ QR កាតសិស្សជាមុនសិន!' };
+    }
+    const users = this.getUsers().filter(u => u.role === 'student');
+    const matched = users.find(u => {
+      const token = this.getUserQrToken(u).toUpperCase();
+      return token === clean || u.username.toUpperCase() === clean || u.id.toUpperCase() === clean;
+    });
+    if (!matched) {
+      return { success: false, message: 'រកមិនឃើញកាត QR សិស្សនេះទេ (ឧ. HPT-QR-STUDENT)!' };
+    }
+    this.setCurrentUser(matched);
+    this.recordActivity('login_qr', `ស្កេនកាត QR ចូលប្រព័ន្ធ (${this.getUserQrToken(matched)})`);
+    return { success: true, user: matched };
   },
 
   // តួនាទីដែលអ្នកប្រើប្រាស់បច្ចុប្បន្នអាចបង្កើត ឬគ្រប់គ្រងបាន
@@ -494,6 +523,25 @@ const StorageManager = {
       case 'view_own_records':
         return user.role === 'student';
 
+      case 'manage_attendance':
+      case 'manage_student_profiles':
+      case 'view_analytics':
+      case 'moderate_forum':
+        return user.role === 'teacher' || user.role === 'head';
+
+      case 'view_attendance':
+      case 'view_student_profiles':
+        return ['student', 'parent', 'teacher', 'head'].includes(user.role);
+
+      case 'manage_mentoring':
+        return user.role === 'head';
+
+      case 'view_mentoring':
+        return user.role === 'teacher' || user.role === 'head';
+
+      case 'post_forum':
+        return !targetItem || this.canUserAccessItem(user, targetItem);
+
       case 'bookmark':
         return true;
 
@@ -703,7 +751,7 @@ const StorageManager = {
   },
 
   // ================= QUIZ RESULTS & SCOREBOARD =================
-  saveQuizResult(itemId, score, total) {
+  saveQuizResult(itemId, score, total, details = {}) {
     try {
       const currUser = this.getCurrentUser();
       const item = this.getItemById(itemId);
@@ -714,6 +762,11 @@ const StorageManager = {
         itemId,
         itemTitle: item ? item.title : 'លំហាត់ / ប្រឡង',
         itemGrade: item ? item.grade : '',
+        itemSubject: item ? item.subject : '',
+        assessmentType: details.assessmentType || (item && item.assessmentType) || 'lesson_quiz',
+        wrongQuestionIndices: Array.isArray(details.wrongQuestionIndices) ? details.wrongQuestionIndices : [],
+        wrongQuestionTexts: Array.isArray(details.wrongQuestionTexts) ? details.wrongQuestionTexts : [],
+        durationSeconds: Number(details.durationSeconds) || 0,
         userId: currUser ? currUser.id : 'guest',
         userName: currUser ? currUser.name : 'ភ្ញៀវ',
         userRole: currUser ? currUser.role : 'guest',
@@ -839,11 +892,310 @@ const StorageManager = {
     localStorage.removeItem(STORAGE_KEYS.FEATURED_MEDIA);
   },
 
+  // ================= PLP MODULE 1: STUDENT & TEACHER ATTENDANCE =================
+  getAttendanceRecords() {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.ATTENDANCE);
+      if (!data) {
+        const seed = typeof INITIAL_ATTENDANCE_RECORDS !== 'undefined' ? INITIAL_ATTENDANCE_RECORDS : [];
+        localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(seed));
+        return seed;
+      }
+      return JSON.parse(data);
+    } catch (e) {
+      return [];
+    }
+  },
+
+  getAttendanceByDateGrade(date, grade) {
+    const records = this.getAttendanceRecords();
+    return records.find(r => r.date === date && r.grade === grade) || null;
+  },
+
+  saveAttendanceRecord({ date, grade, records, notes = {}, teacherShift = null }) {
+    const all = this.getAttendanceRecords();
+    const currUser = this.getCurrentUser();
+    const idx = all.findIndex(r => r.date === date && r.grade === grade);
+    const entry = {
+      id: idx >= 0 ? all[idx].id : ('att-' + Date.now()),
+      date,
+      grade,
+      records: records || {},
+      notes: notes || {},
+      teacherShift: teacherShift || (idx >= 0 ? all[idx].teacherShift : null),
+      updatedBy: currUser ? currUser.name : 'គ្រូបង្រៀន',
+      updatedAt: new Date().toISOString()
+    };
+    if (idx >= 0) {
+      all[idx] = entry;
+    } else {
+      all.unshift(entry);
+    }
+    localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(all));
+    const counts = Object.values(entry.records).reduce((acc, st) => {
+      acc[st] = (acc[st] || 0) + 1;
+      return acc;
+    }, {});
+    this.recordActivity(
+      'mark_attendance',
+      `ស្រង់វត្តមានថ្នាក់ ${grade} (${date}): មក=${counts.P || 0}, យឺត=${counts.L || 0}, ច្បាប់=${counts.E || 0}, អត់=${counts.A || 0}`
+    );
+    return entry;
+  },
+
+  getStudentAttendanceSummary(userId) {
+    const all = this.getAttendanceRecords();
+    const summary = { present: 0, late: 0, excused: 0, absent: 0, total: 0, rate: 100, logs: [] };
+    all.forEach(entry => {
+      const code = entry.records && entry.records[userId];
+      if (!code) return;
+      summary.total++;
+      if (code === 'P') summary.present++;
+      else if (code === 'L') summary.late++;
+      else if (code === 'E') summary.excused++;
+      else if (code === 'A') summary.absent++;
+      summary.logs.push({
+        date: entry.date,
+        grade: entry.grade,
+        status: code,
+        note: (entry.notes && entry.notes[userId]) || ''
+      });
+    });
+    if (summary.total > 0) {
+      summary.rate = Math.round(((summary.present + summary.late) / summary.total) * 100);
+    }
+    return summary;
+  },
+
+  // ================= PLP MODULE 2: STUDENT PROFILES & HEALTH RECORDS =================
+  getStudentProfiles() {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.STUDENT_PROFILES);
+      if (!data) {
+        const seed = typeof INITIAL_STUDENT_PROFILES !== 'undefined' ? INITIAL_STUDENT_PROFILES : {};
+        localStorage.setItem(STORAGE_KEYS.STUDENT_PROFILES, JSON.stringify(seed));
+        return seed;
+      }
+      return JSON.parse(data);
+    } catch (e) {
+      return {};
+    }
+  },
+
+  getStudentProfile(userId) {
+    const all = this.getStudentProfiles();
+    return all[userId] || {};
+  },
+
+  saveStudentProfile(userId, profileData) {
+    const all = this.getStudentProfiles();
+    const currUser = this.getCurrentUser();
+    const user = this.getUsers().find(u => u.id === userId);
+    all[userId] = {
+      ...(all[userId] || {}),
+      ...profileData,
+      updatedBy: currUser ? currUser.name : 'គ្រូបង្រៀន',
+      updatedAt: new Date().toISOString()
+    };
+    localStorage.setItem(STORAGE_KEYS.STUDENT_PROFILES, JSON.stringify(all));
+    this.recordActivity('update_student_profile', `ធ្វើបច្ចុប្បន្នភាពប្រវត្តិ/សុខភាពសិស្ស៖ ${user ? user.name : userId}`);
+    return all[userId];
+  },
+
+  // ================= PLP MODULE 3: INTERACTIVE LESSON Q&A FORUM =================
+  getForumPosts(itemId = null) {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.FORUM_POSTS);
+      const list = data
+        ? JSON.parse(data)
+        : (() => {
+            const seed = typeof INITIAL_FORUM_POSTS !== 'undefined' ? INITIAL_FORUM_POSTS : [];
+            localStorage.setItem(STORAGE_KEYS.FORUM_POSTS, JSON.stringify(seed));
+            return seed;
+          })();
+      return itemId ? list.filter(p => p.itemId === itemId) : list;
+    } catch (e) {
+      return [];
+    }
+  },
+
+  addForumPost(itemId, message) {
+    const currUser = this.getCurrentUser();
+    const item = this.getItemById(itemId);
+    if (!currUser || !message || !message.trim()) return null;
+    const all = this.getForumPosts();
+    const post = {
+      id: 'forum-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+      itemId,
+      userId: currUser.id,
+      userName: currUser.name,
+      userRole: currUser.role,
+      message: message.trim(),
+      createdAt: new Date().toISOString(),
+      isResolved: ['teacher', 'head', 'admin'].includes(currUser.role)
+    };
+    all.push(post);
+    localStorage.setItem(STORAGE_KEYS.FORUM_POSTS, JSON.stringify(all));
+    this.recordActivity('forum_post', `សួរ/ឆ្លើយមេរៀន "${item ? item.title : itemId}": ${post.message.slice(0, 60)}`, item);
+    return post;
+  },
+
+  toggleForumResolved(postId) {
+    const all = this.getForumPosts();
+    const idx = all.findIndex(p => p.id === postId);
+    if (idx === -1) return null;
+    all[idx].isResolved = !all[idx].isResolved;
+    localStorage.setItem(STORAGE_KEYS.FORUM_POSTS, JSON.stringify(all));
+    return all[idx];
+  },
+
+  deleteForumPost(postId) {
+    const all = this.getForumPosts().filter(p => p.id !== postId);
+    localStorage.setItem(STORAGE_KEYS.FORUM_POSTS, JSON.stringify(all));
+    return true;
+  },
+
+  // ================= PLP MODULE 4: PEDAGOGICAL MENTORING & MODEL SCHOOL STANDARDS =================
+  getMentoringData() {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.MENTORING_EVALS);
+      if (!data) {
+        const seed = typeof INITIAL_MENTORING_DATA !== 'undefined'
+          ? INITIAL_MENTORING_DATA
+          : { observations: [], standards: {} };
+        localStorage.setItem(STORAGE_KEYS.MENTORING_EVALS, JSON.stringify(seed));
+        return seed;
+      }
+      return JSON.parse(data);
+    } catch (e) {
+      return { observations: [], standards: {} };
+    }
+  },
+
+  addMentoringObservation(obs) {
+    const currUser = this.getCurrentUser();
+    const data = this.getMentoringData();
+    const scores = obs.scores || {};
+    const vals = [scores.lessonPlan, scores.teachingMethod, scores.engagement, scores.assessment]
+      .map(v => Number(v) || 0);
+    const totalPercent = vals.length ? Math.round((vals.reduce((a, b) => a + b, 0) / (vals.length * 5)) * 100) : 0;
+    const entry = {
+      id: 'ment-' + Date.now() + '-' + Math.random().toString(36).substring(2, 5),
+      teacherId: obs.teacherId,
+      teacherName: obs.teacherName || 'លោកគ្រូ/អ្នកគ្រូ',
+      evaluatorId: currUser ? currUser.id : 'head',
+      evaluatorName: currUser ? currUser.name : 'ប្រធានផ្នែក',
+      date: obs.date || new Date().toISOString().slice(0, 10),
+      grade: obs.grade || '',
+      subject: obs.subject || '',
+      scores,
+      totalPercent,
+      strengths: (obs.strengths || '').trim(),
+      recommendations: (obs.recommendations || '').trim()
+    };
+    data.observations = [entry, ...(data.observations || [])];
+    localStorage.setItem(STORAGE_KEYS.MENTORING_EVALS, JSON.stringify(data));
+    this.recordActivity('mentoring_eval', `វាយតម្លៃគរុកោសល្យគ្រូ ${entry.teacherName} (${entry.totalPercent}%)`);
+    return entry;
+  },
+
+  saveSchoolStandard(standardId, score, evidence) {
+    const currUser = this.getCurrentUser();
+    const data = this.getMentoringData();
+    data.standards = data.standards || {};
+    data.standards[standardId] = {
+      score: Math.min(5, Math.max(1, Number(score) || 3)),
+      evidence: (evidence || '').trim(),
+      updatedBy: currUser ? currUser.name : 'ប្រធានផ្នែក',
+      updatedAt: new Date().toISOString().slice(0, 10)
+    };
+    localStorage.setItem(STORAGE_KEYS.MENTORING_EVALS, JSON.stringify(data));
+    this.recordActivity('inspect_standard', `វាយតម្លៃស្តង់ដាសាលាគំរូ ${standardId} (${data.standards[standardId].score}/5)`);
+    return data.standards[standardId];
+  },
+
+  // ================= PLP MODULE 5: LEARNING ANALYTICS & HONOR ROLL =================
+  getPlpAnalytics(filters = {}) {
+    const grade = filters.grade || 'all';
+    const assessmentType = filters.assessmentType || 'all';
+
+    const students = this.getUsers().filter(u => u.role === 'student' && (grade === 'all' || u.grade === grade));
+    const quizHistory = this.getQuizHistory().filter(q => {
+      const qType = q.assessmentType || 'lesson_quiz';
+      const gradeOk = grade === 'all' || q.itemGrade === grade;
+      const typeOk = assessmentType === 'all' || qType === assessmentType;
+      return gradeOk && typeOk;
+    });
+    const submissions = this.getSubmissions().filter(s => grade === 'all' || s.itemGrade === grade);
+    const logs = this.getActivityLogs();
+
+    const missedMap = {};
+    quizHistory.forEach(q => {
+      if (Array.isArray(q.wrongQuestionTexts)) {
+        q.wrongQuestionTexts.forEach(qText => {
+          const key = `${q.itemTitle}::${qText}`;
+          if (!missedMap[key]) {
+            missedMap[key] = { itemTitle: q.itemTitle, questionText: qText, missCount: 0 };
+          }
+          missedMap[key].missCount++;
+        });
+      }
+    });
+    const missedQuestions = Object.values(missedMap).sort((a, b) => b.missCount - a.missCount);
+
+    const studentStats = students.map(st => {
+      const stQuizzes = quizHistory.filter(q => q.userId === st.id);
+      const stHomeworks = submissions.filter(s => s.userId === st.id && s.status === 'graded');
+      const att = this.getStudentAttendanceSummary(st.id);
+      const lessonViews = logs.filter(l => l.userId === st.id && l.action === 'view_lesson').length;
+
+      const quizAvg = stQuizzes.length
+        ? Math.round(stQuizzes.reduce((sum, q) => sum + (q.percentage || 0), 0) / stQuizzes.length)
+        : null;
+      const hwAvg = stHomeworks.length
+        ? Math.round(stHomeworks.reduce((sum, h) => sum + Math.round(((h.score || 0) / (h.maxScore || 100)) * 100), 0) / stHomeworks.length)
+        : null;
+
+      let composite = 0;
+      if (quizAvg !== null && hwAvg !== null) composite = Math.round((quizAvg * 0.6) + (hwAvg * 0.25) + (att.rate * 0.15));
+      else if (quizAvg !== null) composite = Math.round((quizAvg * 0.8) + (att.rate * 0.2));
+      else if (hwAvg !== null) composite = Math.round((hwAvg * 0.8) + (att.rate * 0.2));
+      else composite = att.total > 0 ? Math.round(att.rate * 0.4) : 0;
+
+      const needsSupport = (quizAvg !== null && quizAvg < 60) || (att.total > 0 && att.rate < 80) || (stQuizzes.length === 0 && stHomeworks.length === 0);
+
+      return {
+        student: st,
+        quizCount: stQuizzes.length,
+        quizAvg,
+        hwCount: stHomeworks.length,
+        hwAvg,
+        attendanceRate: att.rate,
+        attendanceTotal: att.total,
+        lessonViews,
+        composite,
+        needsSupport
+      };
+    });
+
+    const honorRoll = [...studentStats].sort((a, b) => b.composite - a.composite);
+    const atRiskStudents = studentStats.filter(s => s.needsSupport);
+
+    return {
+      totalStudents: students.length,
+      totalQuizAttempts: quizHistory.length,
+      totalSubmissions: submissions.length,
+      honorRoll,
+      atRiskStudents,
+      missedQuestions
+    };
+  },
+
   // ================= BACKUP & RESTORE =================
   exportData() {
     const data = {
       school: SCHOOL_INFO.nameKhmer,
-      version: '3.0',
+      version: '4.0-PLP',
       exportedAt: new Date().toISOString(),
       users: this.getUsers(),
       items: this.getItems(),
@@ -852,7 +1204,11 @@ const StorageManager = {
       quizHistory: this.getQuizHistory(),
       submissions: this.getSubmissions(),
       activityLogs: this.getActivityLogs(),
-      featuredMedia: this.getFeaturedMedia()
+      featuredMedia: this.getFeaturedMedia(),
+      attendance: this.getAttendanceRecords(),
+      studentProfiles: this.getStudentProfiles(),
+      forumPosts: this.getForumPosts(),
+      mentoringEvals: this.getMentoringData()
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -891,6 +1247,18 @@ const StorageManager = {
       if (data.featuredMedia) {
         this.saveFeaturedMedia(data.featuredMedia);
       }
+      if (Array.isArray(data.attendance)) {
+        localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(data.attendance));
+      }
+      if (data.studentProfiles && typeof data.studentProfiles === 'object') {
+        localStorage.setItem(STORAGE_KEYS.STUDENT_PROFILES, JSON.stringify(data.studentProfiles));
+      }
+      if (Array.isArray(data.forumPosts)) {
+        localStorage.setItem(STORAGE_KEYS.FORUM_POSTS, JSON.stringify(data.forumPosts));
+      }
+      if (data.mentoringEvals && typeof data.mentoringEvals === 'object') {
+        localStorage.setItem(STORAGE_KEYS.MENTORING_EVALS, JSON.stringify(data.mentoringEvals));
+      }
       return { success: true, count };
     } catch (e) {
       return { success: false, message: e.message };
@@ -907,6 +1275,10 @@ const StorageManager = {
     localStorage.removeItem(STORAGE_KEYS.HOMEWORK_SUBMISSIONS);
     localStorage.removeItem(STORAGE_KEYS.ACTIVITY_LOGS);
     localStorage.removeItem(STORAGE_KEYS.FEATURED_MEDIA);
+    localStorage.removeItem(STORAGE_KEYS.ATTENDANCE);
+    localStorage.removeItem(STORAGE_KEYS.STUDENT_PROFILES);
+    localStorage.removeItem(STORAGE_KEYS.FORUM_POSTS);
+    localStorage.removeItem(STORAGE_KEYS.MENTORING_EVALS);
     return true;
   }
 };

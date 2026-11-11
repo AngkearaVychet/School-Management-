@@ -161,6 +161,7 @@ const SAMPLE_ITEMS = [
     grade: 'ថ្នាក់ទី៣',
     program: 'khmer_primary',
     type: 'exercise',
+    assessmentType: 'monthly_test',
     teacher: 'អ្នកគ្រូ ម៉ៅ ចិន្តា',
     school: 'សាលាអន្តរជាតិ ហេមតុន',
     createdAt: '2026-10-18',
@@ -344,6 +345,7 @@ Sing along with Teacher Sarah to master the sounds!
     grade: 'GEP 2',
     program: 'english_pri',
     type: 'exercise',
+    assessmentType: 'semester_exam',
     teacher: 'Teacher David Sok',
     school: 'សាលាអន្តរជាតិ ហេមតុន',
     createdAt: '2026-10-24',
@@ -557,6 +559,7 @@ Sing along with Teacher Sarah to master the sounds!
     grade: 'ថ្នាក់ទី១',
     program: 'khmer_primary',
     type: 'exercise',
+    assessmentType: 'lesson_quiz',
     teacher: 'លោកគ្រូ អ៊ុក វិបុល',
     createdById: 'user-teacher-1',
     school: 'សាលាអន្តរជាតិ ហេមតុន',
@@ -586,3 +589,182 @@ Sing along with Teacher Sarah to master the sounds!
     ]
   }
 ];
+
+// ================= ទិន្នន័យគ្រប់គ្រងប្រព័ន្ធស្តង់ដា PLP (MoEYS Style) =================
+const ASSESSMENT_TYPES = {
+  lesson_quiz: {
+    id: 'lesson_quiz',
+    label: 'លំហាត់តាមមេរៀន (Lesson Quiz)',
+    short: 'តាមមេរៀន',
+    badge: 'bg-blue-100 text-blue-900 border-blue-200'
+  },
+  monthly_test: {
+    id: 'monthly_test',
+    label: 'ប្រឡងប្រចាំខែ (Monthly Test)',
+    short: 'ប្រចាំខែ',
+    badge: 'bg-amber-100 text-amber-800 border-amber-200'
+  },
+  semester_exam: {
+    id: 'semester_exam',
+    label: 'ប្រឡងឆមាស (Semester Exam)',
+    short: 'ប្រឡងឆមាស',
+    badge: 'bg-rose-100 text-rose-800 border-rose-200'
+  }
+};
+
+const ATTENDANCE_STATUS_META = {
+  P: { code: 'P', label: 'មករៀន', short: 'វត្តមាន (P)', badge: 'bg-emerald-100 text-emerald-800 border-emerald-300', peerBtn: 'peer-checked:bg-emerald-600 peer-checked:text-white peer-checked:border-emerald-700' },
+  L: { code: 'L', label: 'មកយឺត', short: 'យឺត (L)', badge: 'bg-amber-100 text-amber-800 border-amber-300', peerBtn: 'peer-checked:bg-amber-500 peer-checked:text-white peer-checked:border-amber-600' },
+  E: { code: 'E', label: 'មានច្បាប់', short: 'សុំច្បាប់ (E)', badge: 'bg-blue-100 text-blue-800 border-blue-300', peerBtn: 'peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-700' },
+  A: { code: 'A', label: 'អវត្តមាន', short: 'អត់ច្បាប់ (A)', badge: 'bg-rose-100 text-rose-800 border-rose-300', peerBtn: 'peer-checked:bg-rose-600 peer-checked:text-white peer-checked:border-rose-700' }
+};
+
+const MODEL_SCHOOL_STANDARDS = [
+  {
+    id: 'std-1',
+    title: 'ស្តង់ដាទី១៖ លទ្ធផលសិក្សារបស់សិស្ស',
+    description: 'អត្រាសិស្សប្រឡងជាប់ ការចេះអាន សរសេរ គិតលេខ និងការចូលរួមធ្វើលំហាត់ប្រចាំថ្ងៃ'
+  },
+  {
+    id: 'std-2',
+    title: 'ស្តង់ដាទី២៖ ដំណើរការបង្រៀន និងរៀន (គរុកោសល្យ)',
+    description: 'កិច្ចតែងការបង្រៀន សម្ភារៈឧបទេស ការបង្រៀនតាមបែបសកម្ម និងការវាយតម្លៃសិស្ស'
+  },
+  {
+    id: 'std-3',
+    title: 'ស្តង់ដាទី៣៖ ការចូលរួមរបស់មាតាបិតា និងសហគមន៍',
+    description: 'ការតាមដានព័ត៌មានសិស្សដោយអាណាព្យាបាល និងកិច្ចសហការរវាងសាលានិងគ្រួសារ'
+  },
+  {
+    id: 'std-4',
+    title: 'ស្តង់ដាទី៤៖ ការគ្រប់គ្រង ភាពជាអ្នកដឹកនាំ និងកំណត់ត្រា',
+    description: 'វត្តមានគ្រូនិងសិស្ស ការគ្រប់គ្រងឯកសារឌីជីថល និងតម្លាភាពប្រតិបត្តិការសាលា'
+  },
+  {
+    id: 'std-5',
+    title: 'ស្តង់ដាទី៥៖ បរិស្ថាន សុខភាព និងអនាម័យសាលារៀន',
+    description: 'តាមដានសុខភាពសិស្ស អាហារូបត្ថម្ភ សុវត្ថិភាពបរិវេណសាលា និងបរិស្ថានបៃតង'
+  }
+];
+
+function _plpTodayDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+const INITIAL_ATTENDANCE_RECORDS = [
+  {
+    id: 'att-sample-1',
+    date: _plpTodayDate(),
+    grade: 'ថ្នាក់ទី១',
+    records: {
+      'user-student-1': 'P',
+      'user-student-2': 'L'
+    },
+    notes: {
+      'user-student-1': 'ចូលរៀនទៀងទាត់ និងសកម្ម',
+      'user-student-2': 'មកយឺត ១០ នាទីដោយសារភ្លៀង'
+    },
+    teacherShift: {
+      teacherId: 'user-teacher-1',
+      teacherName: 'លោកគ្រូ អ៊ុក វិបុល',
+      shift: 'វេនព្រឹក (07:30 - 11:00)',
+      checkIn: '07:20',
+      status: 'on_time'
+    },
+    updatedBy: 'លោកគ្រូ អ៊ុក វិបុល',
+    updatedAt: new Date().toISOString()
+  }
+];
+
+const INITIAL_STUDENT_PROFILES = {
+  'user-student-1': {
+    studentCode: 'HPT-01-001',
+    gender: 'ប្រុស',
+    dob: '2019-05-14',
+    guardianName: 'អ្នកស្រី ហេង ចន្ទ្រា',
+    guardianPhone: '012 889 900',
+    bloodGroup: 'O+',
+    allergies: 'គ្មាន',
+    healthNotes: 'សុខភាពល្អ ភ្នែកនិងធ្មេញធម្មតា (ពិនិត្យសុខភាពប្រចាំឆមាស)',
+    behaviorNote: 'មានវិន័យល្អ ចូលចិត្តសួរសំណួរ និងជួយមិត្តភក្តិ',
+    updatedAt: new Date().toISOString(),
+    updatedBy: 'លោកគ្រូ អ៊ុក វិបុល'
+  },
+  'user-student-2': {
+    studentCode: 'HPT-01-002',
+    gender: 'ស្រី',
+    dob: '2019-08-22',
+    guardianName: 'លោក សុខ រតនៈ',
+    guardianPhone: '077 554 321',
+    bloodGroup: 'A+',
+    allergies: 'អាឡ័កស៊ីធូលីស្រាល',
+    healthNotes: 'ណែនាំពាក់ម៉ាស់ពេលអាកាសធាតុមានធូលីច្រើន',
+    behaviorNote: 'រួសរាយរាក់ទាក់ ឧស្សាហ៍ព្យាយាមអានសៀវភៅ',
+    updatedAt: new Date().toISOString(),
+    updatedBy: 'លោកគ្រូ អ៊ុក វិបុល'
+  }
+};
+
+const INITIAL_FORUM_POSTS = [
+  {
+    id: 'forum-1',
+    itemId: 'hpt-1',
+    userId: 'user-student-1',
+    userName: 'សិស្ស សុខ ពិសិដ្ឋ',
+    userRole: 'student',
+    message: 'លោកគ្រូ តើព្យញ្ជនៈ "ង" អានចេញសំឡេងយ៉ាងម៉េចដែរទើបត្រឹមត្រូវ?',
+    createdAt: new Date(Date.now() - 3600 * 1000 * 5).toISOString(),
+    isResolved: true
+  },
+  {
+    id: 'forum-2',
+    itemId: 'hpt-1',
+    userId: 'user-teacher-1',
+    userName: 'លោកគ្រូ អ៊ុក វិបុល',
+    userRole: 'teacher',
+    message: 'ពូកែសួរណាស់ពិសិដ្ឋ! ព្យញ្ជនៈ "ង" (សំឡេង "អ៊") បញ្ចេញសំឡេងពីបំពង់ក ដូចក្នុងវីដេអូនាទីទី ០១:២៥។ សូមហាត់អានឡើងវិញណា៎!',
+    createdAt: new Date(Date.now() - 3600 * 1000 * 3).toISOString(),
+    isResolved: true
+  },
+  {
+    id: 'forum-3',
+    itemId: 'hpt-12',
+    userId: 'user-student-2',
+    userName: 'សិស្ស ចាន់ ម៉ាលី',
+    userRole: 'student',
+    message: 'នាងខ្ញុំឆ្ងល់ថា ស្រៈ "ិ" និង "ី" ខុសគ្នាត្រង់ប្រវែងសំឡេងមែនទេលោកគ្រូ?',
+    createdAt: new Date(Date.now() - 3600 * 1000 * 2).toISOString(),
+    isResolved: false
+  }
+];
+
+const INITIAL_MENTORING_DATA = {
+  observations: [
+    {
+      id: 'ment-1',
+      teacherId: 'user-teacher-1',
+      teacherName: 'លោកគ្រូ អ៊ុក វិបុល',
+      evaluatorId: 'user-head-1',
+      evaluatorName: 'លោក សុខ ដារ៉ា (ប្រធានផ្នែក)',
+      date: _plpTodayDate(),
+      grade: 'ថ្នាក់ទី១',
+      subject: 'ភាសាខ្មែរ',
+      scores: {
+        lessonPlan: 5,
+        teachingMethod: 5,
+        engagement: 4,
+        assessment: 5
+      },
+      totalPercent: 95,
+      strengths: 'កិច្ចតែងការបង្រៀនច្បាស់លាស់ ប្រើវីដេអូ និងល្បែងផ្គុំព្យញ្ជនៈឱ្យសិស្សចូលរួមយ៉ាងសកម្ម។',
+      recommendations: 'បន្តតាមដានសិស្សដែលមកយឺត ឬពិន្ទុទាបក្រោម ៦០% ដោយផ្តល់លំហាត់ជំនួយបន្ថែម។'
+    }
+  ],
+  standards: {
+    'std-1': { score: 5, evidence: 'មានតារាងស្រង់ពិន្ទុ Quiz/ប្រឡង និងប្រព័ន្ធតាមដានសិស្សខ្សោយច្បាស់លាស់', updatedBy: 'លោក សុខ ដារ៉ា (ប្រធានផ្នែក)', updatedAt: _plpTodayDate() },
+    'std-2': { score: 5, evidence: 'គ្រូមានមេរៀនវីដេអូ ឯកសារ Drive និងវេទិកាសួរ-ឆ្លើយជាមួយសិស្ស', updatedBy: 'លោក សុខ ដារ៉ា (ប្រធានផ្នែក)', updatedAt: _plpTodayDate() },
+    'std-3': { score: 4, evidence: 'មាតាបិតាចូលពិនិត្យពិន្ទុ និងកិច្ចការកូនតាម Parent Portal ជាប្រចាំ', updatedBy: 'លោក សុខ ដារ៉ា (ប្រធានផ្នែក)', updatedAt: _plpTodayDate() },
+    'std-4': { score: 5, evidence: 'ប្រព័ន្ធស្រង់វត្តមានឌីជីថល កាត QR សិស្ស និង System Records ដំណើរការល្អ', updatedBy: 'លោក សុខ ដារ៉ា (ប្រធានផ្នែក)', updatedAt: _plpTodayDate() },
+    'std-5': { score: 4, evidence: 'មានប្រវត្តិសុខភាពសិស្ស និងព័ត៌មានទំនាក់ទំនងបន្ទាន់គ្រប់សិស្សថ្នាក់ទី១', updatedBy: 'លោក សុខ ដារ៉ា (ប្រធានផ្នែក)', updatedAt: _plpTodayDate() }
+  }
+};
