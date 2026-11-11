@@ -69,27 +69,27 @@
   <!-- ================= MAIN NAVIGATION BAR ================= -->
   <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-xs">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex items-center justify-between h-18 sm:h-20 gap-4">
+      <div class="flex items-center justify-between min-h-[68px] sm:min-h-[76px] py-2 gap-3 lg:gap-4">
         
         <!-- Logo & School Name -->
-        <div class="flex items-center gap-3 cursor-pointer py-2" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+        <div class="flex items-center gap-2.5 sm:gap-3 cursor-pointer flex-shrink-0" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
           <img 
             src="images/logo.png" 
             alt="Logo សាលាអន្តរជាតិ ហេមតុន" 
-            class="w-12 h-12 sm:w-14 sm:h-14 object-contain filter drop-shadow hover:scale-105 transition flex-shrink-0"
+            class="w-11 h-11 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain filter drop-shadow hover:scale-105 transition flex-shrink-0"
           />
-          <div>
-            <h1 class="text-base sm:text-lg md:text-xl font-black text-blue-950 leading-tight tracking-tight">
+          <div class="min-w-0">
+            <h1 class="text-sm sm:text-base md:text-lg font-black text-blue-950 leading-normal tracking-tight whitespace-nowrap">
               សាលាអន្តរជាតិ ហេមតុន
             </h1>
-            <p class="text-[10px] sm:text-xs font-bold text-red-600 tracking-wider uppercase">
+            <p class="text-[10px] sm:text-[11px] font-bold text-red-600 tracking-wider uppercase whitespace-nowrap">
               Hampton International School
             </p>
           </div>
         </div>
 
-        <!-- Search Input (Desktop) -->
-        <div class="hidden lg:flex items-center flex-1 max-w-md mx-6">
+        <!-- Search Input (Wide Desktop) -->
+        <div class="hidden xl:flex items-center flex-1 min-w-[210px] max-w-sm mx-2">
           <div class="relative w-full">
             <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
             <input 
@@ -102,14 +102,14 @@
         </div>
 
         <!-- Action Controls & Auth User Nav -->
-        <div class="flex items-center gap-2 sm:gap-2.5">
+        <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
 
           <!-- Student My Records Shortcut (Visible to Student only) -->
           <button 
             id="studentRecordsBtn" 
             onclick="openStudentRecordsModal()" 
             title="ប្រវត្តិសិក្សា ពិន្ទុ និងកិច្ចការផ្ទះរបស់ខ្ញុំ" 
-            class="hidden px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-xs sm:text-sm font-bold border border-emerald-200 transition flex items-center gap-1.5 whitespace-nowrap"
+            class="hidden px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-xs font-bold border border-emerald-200 transition flex items-center gap-1.5 whitespace-nowrap"
           >
             <i class="fa-solid fa-clipboard-check text-emerald-700"></i>
             <span class="hidden md:inline">ប្រវត្តិសិក្សា</span>
@@ -120,10 +120,10 @@
             id="parentDashBtn" 
             onclick="openParentModal()" 
             title="ផ្ទាំងតាមដានការរៀនរបស់កូន" 
-            class="hidden px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs sm:text-sm font-bold border border-amber-200 transition flex items-center gap-1.5 whitespace-nowrap"
+            class="hidden px-2.5 sm:px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold border border-amber-200 transition flex items-center gap-1.5 whitespace-nowrap"
           >
             <i class="fa-solid fa-chart-line text-amber-600"></i>
-            <span class="hidden md:inline">តាមដានកូន</span>
+            <span class="hidden lg:inline">តាមដានកូន</span>
           </button>
 
           <!-- User Management Button (Admin: All, Head: Teacher/Student/Parent, Teacher: Student/Parent) -->
@@ -131,10 +131,10 @@
             id="adminManageBtn" 
             onclick="openUserManagementModal()" 
             title="គ្រប់គ្រងអ្នកប្រើប្រាស់ និងសិស្ស" 
-            class="hidden px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 text-xs sm:text-sm font-bold border border-red-200 transition flex items-center gap-1.5 whitespace-nowrap"
+            class="hidden px-2.5 sm:px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold border border-red-200 transition flex items-center gap-1.5 whitespace-nowrap"
           >
             <i class="fa-solid fa-users-gear text-red-600"></i>
-            <span id="userManageBtnLabel" class="hidden md:inline">គ្រប់គ្រង User</span>
+            <span id="userManageBtnLabel" class="hidden lg:inline">គ្រប់គ្រង User</span>
           </button>
 
           <!-- Teacher/Admin Scoreboard & Homework Grading Button -->
@@ -142,20 +142,20 @@
             id="scoreboardBtn" 
             onclick="openScoreboardModal()" 
             title="តារាងស្រង់ពិន្ទុប្រឡង និងកិច្ចការផ្ទះសិស្ស" 
-            class="hidden px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-900 text-xs sm:text-sm font-bold border border-indigo-200 transition flex items-center gap-1.5 whitespace-nowrap"
+            class="hidden px-2.5 sm:px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-900 text-xs font-bold border border-indigo-200 transition flex items-center gap-1.5 whitespace-nowrap"
           >
             <i class="fa-solid fa-table-list text-indigo-700"></i>
-            <span class="hidden md:inline">ស្រង់ពិន្ទុ</span>
+            <span class="hidden lg:inline">ស្រង់ពិន្ទុ</span>
           </button>
 
           <!-- Add Content Button (Visible to Teacher & Admin) -->
           <button 
             id="teacherAddBtn" 
             onclick="openAddModal()" 
-            class="hidden px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-bold shadow-md shadow-red-600/25 transition flex items-center gap-1.5 whitespace-nowrap"
+            class="hidden px-3 py-1.5 sm:py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-md shadow-red-600/25 transition flex items-center gap-1.5 whitespace-nowrap"
           >
             <i class="fa-solid fa-circle-plus"></i>
-            <span class="hidden sm:inline">បន្ថែមមេរៀន/លំហាត់</span>
+            <span class="hidden sm:inline">បន្ថែមមេរៀន</span>
             <span class="sm:hidden">បន្ថែម</span>
           </button>
 
@@ -164,13 +164,13 @@
             id="backupBtn"
             onclick="openBackupModal()" 
             title="ទាញយក ឬបញ្ចូលទិន្នន័យ (Backup / Restore)" 
-            class="hidden w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition"
+            class="hidden w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition flex-shrink-0"
           >
             <i class="fa-solid fa-database text-sm text-blue-900"></i>
           </button>
 
           <!-- User Navigation / Login Dropdown -->
-          <div id="userNavContainer"></div>
+          <div id="userNavContainer" class="flex-shrink-0"></div>
 
         </div>
 
