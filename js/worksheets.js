@@ -13,8 +13,20 @@
     select: { label: 'ជ្រើសចម្លើយ',  icon: 'fa-square-caret-down', color: '#7c3aed' },
     tick:   { label: 'ធីក ✓',       icon: 'fa-square-check',     color: '#059669' },
     drag:   { label: 'ពាក្យសម្រាប់អូស', icon: 'fa-hand-pointer',  color: '#d97706' },
-    drop:   { label: 'ចន្លោះទម្លាក់',  icon: 'fa-inbox',           color: '#dc2626' }
+    drop:   { label: 'ចន្លោះទម្លាក់',  icon: 'fa-inbox',           color: '#dc2626' },
+    name:   { label: 'ឈ្មោះសិស្ស',    icon: 'fa-id-badge',        color: '#0891b2', auto: true },
+    date:   { label: 'កាលបរិច្ឆេទ',   icon: 'fa-calendar-day',    color: '#0891b2', auto: true }
   };
+  // fields that are scored (not drag words, not auto-filled name/date)
+  const isQ = (f) => !['drag', 'name', 'date'].includes(f.type);
+  const KM_DIGITS = '០១២៣៤៥៦៧៨៩';
+  const KM_MONTHS = ['មករា', 'កុម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា', 'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'];
+  const kmNum = (n) => String(n).replace(/\d/g, d => KM_DIGITS[d]);
+  const kmDate = (d) => { d = d ? new Date(d) : new Date(); return `${kmNum(d.getDate())} ${KM_MONTHS[d.getMonth()]} ${kmNum(d.getFullYear())}`; };
+  function fillAuto(root, name, date) {
+    root.querySelectorAll('.ws-auto[data-auto=name]').forEach(el => { el.textContent = name || ''; });
+    root.querySelectorAll('.ws-auto[data-auto=date]').forEach(el => { el.textContent = kmDate(date); });
+  }
   const uid = () => Math.random().toString(36).slice(2, 9);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const round4 = (v) => Math.round(v * 10000) / 10000;
@@ -107,7 +119,7 @@
     grid.innerHTML = list.map(w => {
       const s = app.subjectOf(w.subject);
       const b = best[w.id];
-      const nQ = (w.fields || []).filter(f => f.type !== 'drag').length;
+      const nQ = (w.fields || []).filter(isQ).length;
       const canEdit = me.role === 'admin' || w.created_by === me.id;
       return `<article class="lesson-card" data-play="${w.id}" tabindex="0" role="button" aria-label="${esc(w.title)}">
         <div class="relative aspect-[4/3] bg-slate-100 overflow-hidden border-b border-slate-100">
@@ -206,7 +218,7 @@
   function openPlayer(w, { mode = 'student', previous = null } = {}) {
     const app = A();
     const fields = w.fields || [];
-    const nQ = fields.filter(f => f.type !== 'drag').length;
+    const nQ = fields.filter(isQ).length;
     const state = { answers: {}, placed: {}, seconds: 0, done: false, timer: null, selectedDrag: null };
 
     const pagesHtml = (w.pages || []).map((p, pi) => `
@@ -241,6 +253,7 @@
 
     const root = app.$('#modalBox');
     root.querySelectorAll('.ws-page').forEach(watchPageWidth);
+    fillAuto(root, mode === 'view' ? '' : app.state.me.full_name, null);
     state.timer = setInterval(() => { if (document.visibilityState === 'visible') state.seconds++; }, 1000);
     if (mode === 'view') { root.querySelectorAll('.ws-field input, .ws-field select, .ws-field button').forEach(el => el.disabled = true); return; }
 
@@ -264,6 +277,7 @@
     if (f.type === 'select') return `<div class="ws-field" data-type="select" data-fid="${f.id}" style="${st}"><select data-fid="${f.id}" aria-label="ជ្រើសចម្លើយ"><option value=""></option>${(f.options || []).map(o => `<option>${esc(o)}</option>`).join('')}</select></div>`;
     if (f.type === 'tick') return `<button type="button" class="ws-field ws-tick" data-type="tick" data-fid="${f.id}" aria-pressed="false" aria-label="ធីក" style="${st}"><i class="fa-solid fa-check"></i></button>`;
     if (f.type === 'drop') return `<div class="ws-field ws-drop" data-type="drop" data-fid="${f.id}" style="${st}"></div>`;
+    if (f.type === 'name' || f.type === 'date') return `<div class="ws-auto" data-auto="${f.type}" style="${st}"></div>`;
     if (f.type === 'drag') return `<div class="ws-hole" style="${st}"></div><div class="ws-drag" data-fid="${f.id}" data-label="${esc(f.label || '')}" data-home-style="${esc(st + cropStyle(f, page))}" style="${st}${cropStyle(f, page)}" role="button" tabindex="0" aria-label="${esc(f.label || 'ពាក្យ')}"></div>`;
     return '';
   }
@@ -350,7 +364,7 @@
     const btn = app.$('#wsFinish');
     // read text inputs again (autofill etc.)
     root.querySelectorAll('.ws-field[data-type=text] input').forEach(i => { if (i.value.trim()) state.answers[i.dataset.fid] = i.value; else delete state.answers[i.dataset.fid]; });
-    const total = (w.fields || []).filter(f => f.type !== 'drag' && f.type !== 'tick').length;
+    const total = (w.fields || []).filter(f => isQ(f) && f.type !== 'tick').length;
     const answered = Object.keys(state.answers).filter(k => state.answers[k] !== '' && state.answers[k] !== false).length;
     if (mode === 'student' && answered < total && !confirm(`អ្នកនៅសល់សំណួរមិនទាន់ឆ្លើយ។ បញ្ចប់ឥឡូវនេះ?`)) return;
 
@@ -378,7 +392,7 @@
     const norm = (t) => String(t ?? '').replace(/[​‌‍﻿]/g, '').replace(/\s+/g, ' ').toLowerCase().trim().replace(/^[ .។,]+|[ .។,]+$/g, '');
     const results = {}; let score = 0, total = 0;
     for (const f of w.fields || []) {
-      if (f.type === 'drag' || keys[f.id] === undefined) continue;
+      if (!isQ(f) || keys[f.id] === undefined) continue;
       total++;
       let ok;
       if (f.type === 'tick') ok = !!answers[f.id] === (keys[f.id] === true);
@@ -448,6 +462,7 @@
       el.classList.add('placed');
       void fieldById;
     }
+    fillAuto(root, student.full_name, sub.submitted_at);
     const { data: keys } = await app.sb.rpc('worksheet_answers', { p_worksheet: w.id });
     markResults(root, w, sub.answers, sub.results, keys);
     const p = pct(sub);
@@ -652,6 +667,8 @@
       if (f.type === 'tick') return b.answers[f.id] === true ? '✓' : '';
       if (f.type === 'drag') return f.label || '?';
       if (f.type === 'drop') return b.answers[f.id] ? '⇣ ' + b.answers[f.id] : '⇣ ?';
+      if (f.type === 'name') return 'ឈ្មោះសិស្ស (ស្វ័យប្រវត្តិ)';
+      if (f.type === 'date') return 'កាលបរិច្ឆេទ (ស្វ័យប្រវត្តិ)';
       return '';
     };
     const drawFields = () => {
@@ -706,7 +723,7 @@
           if (mode === 'create') {
             const page = b.pages[pi], ratio = page.w / page.h;
             if (f.w < 0.012 || f.h < 0.008) { // a click: drop a default-size box
-              const def = f.type === 'tick' ? [0.035, 0.035 * ratio] : f.type === 'drag' ? [0.12, 0.035 * ratio] : [0.18, 0.035 * ratio];
+              const def = f.type === 'tick' ? [0.035, 0.035 * ratio] : f.type === 'drag' ? [0.12, 0.035 * ratio] : (f.type === 'name' || f.type === 'date') ? [0.25, 0.03 * ratio] : [0.18, 0.035 * ratio];
               f.w = round4(Math.min(def[0], 1 - f.x)); f.h = round4(Math.min(def[1], 1 - f.y));
             }
             setTimeout(() => { const inp = app.$('#bProps [data-autofocus]'); if (inp) inp.focus(); }, 30);
@@ -735,6 +752,8 @@
       if (f.type === 'tick') inner = `<label class="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" data-prop="tick" ${b.answers[f.id] === true ? 'checked' : ''} class="w-5 h-5 accent-emerald-600"> ប្រអប់នេះត្រូវធីក (ចម្លើយត្រូវ)</label>`;
       if (f.type === 'drag') inner = `<label class="flex-1 min-w-[200px]"><span class="label">ពាក្យនៅក្នុងប្រអប់នេះ (សម្រាប់ផ្ទៀងចម្លើយ)</span>
           <input data-prop="label" data-autofocus class="field mt-0.5" value="${esc(f.label || '')}" placeholder="ឧ. ល្អណាស់"></label>`;
+      if (f.type === 'name') inner = `<p class="text-sm text-cyan-800 flex-1 min-w-[200px]"><i class="fa-solid fa-circle-info"></i> ប្រព័ន្ធនឹងសរសេរ <b>ឈ្មោះសិស្ស</b> ដែលចូលធ្វើ ដោយស្វ័យប្រវត្តិ (មិនគិតពិន្ទុ)។ គូសលើចន្លោះ «ឈ្មោះ៖ .....»។</p>`;
+      if (f.type === 'date') inner = `<p class="text-sm text-cyan-800 flex-1 min-w-[200px]"><i class="fa-solid fa-circle-info"></i> ប្រព័ន្ធនឹងសរសេរ <b>កាលបរិច្ឆេទ</b> ដែលសិស្សធ្វើកិច្ចការ ដោយស្វ័យប្រវត្តិ (មិនគិតពិន្ទុ)។</p>`;
       if (f.type === 'drop') inner = `<label class="flex-1 min-w-[200px]"><span class="label">ពាក្យដែលត្រូវទម្លាក់ចូល</span>
           <select data-prop="answer" data-autofocus class="field mt-0.5"><option value="">— ជ្រើសពាក្យ —</option>${dragLabels().map(l => `<option ${b.answers[f.id] === l ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>
           ${dragLabels().length ? '' : '<span class="text-[11px] text-amber-700">គូសប្រអប់ «ពាក្យសម្រាប់អូស» ជាមុនសិន</span>'}</label>`;
@@ -835,7 +854,7 @@
       if (!m.title) return 'សូមបញ្ចូលចំណងជើងកិច្ចការ';
       if (!m.grade) return 'សូមជ្រើសថ្នាក់';
       if (!b.pages.length) return 'សូម Upload រូប ឬ PDF សន្លឹកកិច្ចការ';
-      const gradable = b.fields.filter(f => f.type !== 'drag');
+      const gradable = b.fields.filter(isQ);
       if (!gradable.length) return 'សូមគូសប្រអប់ចម្លើយយ៉ាងហោចណាស់មួយ';
       const missing = gradable.filter(f => f.type !== 'tick' && !b.answers[f.id]);
       if (missing.length) { b.selected = missing[0].id; drawFields(); drawProps(); return `មានប្រអប់ ${missing.length} មិនទាន់កំណត់ចម្លើយ (បានជ្រើសប្រអប់ដំបូងឱ្យ)`; }
@@ -846,7 +865,7 @@
       return null;
     }
     // ticks without answer = "should stay empty" → store false so they're scored
-    const answerKey = () => { const k = { ...b.answers }; b.fields.forEach(f => { if (f.type === 'tick' && k[f.id] !== true) k[f.id] = false; if (f.type === 'drag') delete k[f.id]; }); return k; };
+    const answerKey = () => { const k = { ...b.answers }; b.fields.forEach(f => { if (f.type === 'tick' && k[f.id] !== true) k[f.id] = false; if (!isQ(f) && f.type !== 'tick') delete k[f.id]; }); return k; };
 
     app.$('#bSave').addEventListener('click', async () => {
       const m = collect();
@@ -877,6 +896,7 @@
       app.closeModal(true);
       openPlayer(temp, { mode: 'view' });
       const root2 = app.$('#modalBox');
+      fillAuto(root2, app.state.me.full_name, null);
       root2.querySelectorAll('.ws-field input, .ws-field select, .ws-field button').forEach(el => el.disabled = false);
       const st = { answers: {}, placed: {}, done: false, selectedDrag: null };
       root2.querySelectorAll('.ws-field[data-type=text] input').forEach(inp => inp.addEventListener('input', () => { st.answers[inp.dataset.fid] = inp.value; }));

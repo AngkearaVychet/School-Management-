@@ -66,3 +66,6 @@
 .b-field-label { position: absolute; left: 0; bottom: 100%; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; line-height: 1.5;
   background: var(--c); color: #fff; padding: 0 5px; border-radius: 3px 3px 0 0; pointer-events: none; }
 .b-handle { position: absolute; right: -6px; bottom: -6px; width: 12px; height: 12px; background: #fff; border: 2px solid var(--c); border-radius: 3px; cursor: nwse-resize; }
+.ws-auto { position: absolute; display: flex; align-items: flex-end; padding: 0 .3em .05em; white-space: nowrap; overflow: hidden;
+  color: #1e3a8a; font-weight: 700; line-height: 1.1; background: rgba(255,255,255,.88); border-radius: 3px; pointer-events: none; }
+.ws-auto:empty { background: transparent; }
