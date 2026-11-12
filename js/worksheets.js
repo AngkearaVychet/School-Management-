@@ -22,6 +22,8 @@
   };
   // fields that are scored (not drag words, answer dots, audio or auto-filled name/date)
   const isQ = (f) => !['drag', 'name', 'date', 'mright', 'audio'].includes(f.type);
+  // number of questions: a row of grouped tick boxes counts once
+  const qCount = (fields) => { const fl = (fields || []).filter(isQ); return fl.filter(f => !f.group).length + new Set(fl.filter(f => f.group).map(f => f.group)).size; };
   const MATCH_LABELS = ['ក', 'ខ', 'គ', 'ឃ', 'ង', 'ច', 'ឆ', 'ជ', 'ឈ', 'ញ', 'ដ', 'ឋ', 'ឌ', 'ឍ', 'ណ', 'ត', 'ថ', 'ទ', 'ធ', 'ន'];
   // Google Drive share link → direct stream link
   const audioUrl = (src) => { const m = String(src || '').match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:.*&)?id=)([A-Za-z0-9_-]+)/); return m ? `https://drive.google.com/uc?export=download&id=${m[1]}` : src; };
@@ -38,7 +40,9 @@
       const v = speechSynthesis.getVoices().find(x => x.lang && x.lang.replace('_', '-').toLowerCase().startsWith(lang.slice(0, 2)) && /female|samantha|google|zira|aria|jenny/i.test(x.name))
         || speechSynthesis.getVoices().find(x => x.lang && x.lang.toLowerCase().startsWith(lang.slice(0, 2)));
       if (v) u.voice = v;
-      u.onend = onEnd; u.onerror = onEnd;
+      let ended = false; const fin = () => { if (!ended) { ended = true; clearTimeout(guard); onEnd(); } };
+      const guard = setTimeout(fin, 2500 + m[2].length * 180);   // some devices never fire onend
+      u.onend = fin; u.onerror = fin;
       speechSynthesis.cancel(); speechSynthesis.speak(u);
       currentAudio = { a: { pause: () => speechSynthesis.cancel() }, el };
       return Promise.resolve();
@@ -237,7 +241,7 @@
     grid.innerHTML = list.map(w => {
       const s = app.subjectOf(w.subject);
       const b = best[w.id];
-      const nQ = (w.fields || []).filter(isQ).length;
+      const nQ = qCount(w.fields);
       const canEdit = w.created_by === me.id || app.canManageGrade(w.grade);
       return `<article class="lesson-card" data-play="${w.id}" tabindex="0" role="button" aria-label="${esc(w.title)}">
         <div class="relative aspect-[4/3] bg-slate-100 overflow-hidden border-b border-slate-100">
@@ -336,7 +340,7 @@
   function openPlayer(w, { mode = 'student', previous = null } = {}) {
     const app = A();
     const fields = w.fields || [];
-    const nQ = fields.filter(isQ).length;
+    const nQ = qCount(fields);
     const state = { answers: {}, placed: {}, seconds: 0, done: false, timer: null, selectedDrag: null };
 
     const pagesHtml = (w.pages || []).map((p, pi) => `
@@ -490,8 +494,11 @@
     const btn = app.$('#wsFinish');
     // read text inputs again (autofill etc.)
     root.querySelectorAll('.ws-field[data-type=text] input').forEach(i => { if (i.value.trim()) state.answers[i.dataset.fid] = i.value; else delete state.answers[i.dataset.fid]; });
-    const total = (w.fields || []).filter(f => isQ(f) && f.type !== 'tick').length;
-    const answered = Object.keys(state.answers).filter(k => state.answers[k] !== '' && state.answers[k] !== false).length;
+    const fl = w.fields || [];
+    const groups = [...new Set(fl.filter(f => f.type === 'tick' && f.group).map(f => f.group))];
+    const total = fl.filter(f => isQ(f) && f.type !== 'tick').length + groups.length;
+    const answered = fl.filter(f => isQ(f) && f.type !== 'tick' && state.answers[f.id] !== undefined && state.answers[f.id] !== '').length
+      + groups.filter(g => fl.some(f => f.group === g && state.answers[f.id] === true)).length;
     if (mode === 'student' && answered < total && !confirm(`អ្នកនៅសល់សំណួរមិនទាន់ឆ្លើយ។ បញ្ចប់ឥឡូវនេះ?`)) return;
 
     btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
@@ -516,15 +523,17 @@
 
   function gradeLocally(w, answers, keys) {
     const norm = (t) => String(t ?? '').replace(/[​‌‍﻿]/g, '').replace(/\s+/g, ' ').toLowerCase().trim().replace(/^[ .។,]+|[ .។,]+$/g, '');
-    const results = {}; let score = 0, total = 0;
+    const results = {}, groups = {}; let score = 0, total = 0;
     for (const f of w.fields || []) {
       if (!isQ(f) || keys[f.id] === undefined) continue;
-      total++;
       let ok;
       if (f.type === 'tick') ok = !!answers[f.id] === (keys[f.id] === true);
       else ok = String(keys[f.id]).split('/').some(a => norm(a) !== '' && norm(a) === norm(answers[f.id]));
-      results[f.id] = ok; if (ok) score++;
+      if (f.type === 'tick' && f.group) { const g = groups[f.group] || (groups[f.group] = { ok: true, ids: [] }); g.ok = g.ok && ok; g.ids.push(f.id); continue; }
+      total++; results[f.id] = ok; if (ok) score++;
     }
+    // a row of tick boxes (same group) is one question
+    for (const g of Object.values(groups)) { total++; if (g.ok) score++; g.ids.forEach(id => { results[id] = g.ok; }); }
     return { score, total, results, answers: keys };
   }
 
@@ -537,6 +546,10 @@
       el.querySelectorAll('input,select').forEach(i => i.disabled = true);
       if (el.tagName === 'BUTTON') el.disabled = true;
       const f0 = (w.fields || []).find(x => x.id === id);
+      if (f0 && f0.group) {   // grouped ticks: colour the row, outline the box that should be ticked
+        if (!ok && keys && keys[id] === true) el.classList.add('ws-should');
+        return;
+      }
       if (!ok && keys && keys[id] !== undefined && f0 && f0.type !== 'mleft') {
         const f = f0;
         let txt = f.type === 'tick' ? (keys[id] === true ? 'ត្រូវធីក ✓' : 'មិនត្រូវធីក') : String(keys[id]).split('/')[0];
@@ -796,7 +809,7 @@
     const fieldLabel = (f) => {
       if (f.type === 'text') return b.answers[f.id] || '?';
       if (f.type === 'select') return b.answers[f.id] ? '▾ ' + b.answers[f.id] : '▾ ?';
-      if (f.type === 'tick') return b.answers[f.id] === true ? '✓' : '';
+      if (f.type === 'tick') return (b.answers[f.id] === true ? '✓' : '') + (f.group ? ` [${f.group}]` : '');
       if (f.type === 'drag') return f.label || '?';
       if (f.type === 'drop') return b.answers[f.id] ? '⇣ ' + b.answers[f.id] : '⇣ ?';
       if (f.type === 'name') return 'ឈ្មោះសិស្ស (ស្វ័យប្រវត្តិ)';
@@ -895,7 +908,9 @@
           <input data-prop="options" data-autofocus class="field mt-0.5" value="${esc((f.options || []).join(' / '))}" placeholder="ឧ. ក / ខ / គ"></label>
         <label class="min-w-[150px]"><span class="label">ចម្លើយត្រូវ</span>
           <select data-prop="answer" class="field mt-0.5"><option value="">—</option>${(f.options || []).map(o => `<option ${b.answers[f.id] === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select></label>`;
-      if (f.type === 'tick') inner = `<label class="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" data-prop="tick" ${b.answers[f.id] === true ? 'checked' : ''} class="w-5 h-5 accent-emerald-600"> ប្រអប់នេះត្រូវធីក (ចម្លើយត្រូវ)</label>`;
+      if (f.type === 'tick') inner = `<label class="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" data-prop="tick" ${b.answers[f.id] === true ? 'checked' : ''} class="w-5 h-5 accent-emerald-600"> ប្រអប់នេះត្រូវធីក (ចម្លើយត្រូវ)</label>
+        <label class="min-w-[220px]"><span class="label">ក្រុម <span class="font-normal text-slate-400">(ស្រេចចិត្ត — ប្រអប់ក្នុងជួរតែមួយ ដាក់ឈ្មោះក្រុមដូចគ្នា ឧ. 1 → គិតជា ១ សំណួរ)</span></span>
+          <input data-prop="group" class="field mt-0.5" value="${esc(f.group || '')}" maxlength="10" placeholder="ឧ. 1"></label>`;
       if (f.type === 'drag') inner = `<label class="flex-1 min-w-[200px]"><span class="label">ពាក្យនៅក្នុងប្រអប់នេះ (សម្រាប់ផ្ទៀងចម្លើយ)</span>
           <input data-prop="label" data-autofocus class="field mt-0.5" value="${esc(f.label || '')}" placeholder="ឧ. ល្អណាស់"></label>`;
       if (f.type === 'name') inner = `<p class="text-sm text-cyan-800 flex-1 min-w-[200px]"><i class="fa-solid fa-circle-info"></i> ប្រព័ន្ធនឹងសរសេរ <b>ឈ្មោះសិស្ស</b> ដែលចូលធ្វើ ដោយស្វ័យប្រវត្តិ (មិនគិតពិន្ទុ)។ គូសលើចន្លោះ «ឈ្មោះ៖ .....»។</p>`;
@@ -934,6 +949,7 @@
         const el = e.target, prop = el.dataset.prop; if (!prop) return;
         if (prop === 'answer') { if (el.value.trim()) b.answers[f.id] = el.value.trim(); else delete b.answers[f.id]; }
         if (prop === 'tick') { if (el.checked) b.answers[f.id] = true; else delete b.answers[f.id]; }
+        if (prop === 'group') { const v = el.value.trim(); if (v) f.group = v; else delete f.group; }
         if (prop === 'label') {
           const old = f.label; f.label = el.value.trim();
           const target = f.type === 'mright' ? 'mleft' : 'drop';
@@ -1086,7 +1102,7 @@
       const err = validate(m);
       if (err) return app.toast(err, 'error');
       const btn = app.$('#bSave'); btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-      const fields = b.fields.map(({ id, page, x, y, w, h, type, options, label, src }) => ({ id, page, x, y, w, h, type, ...(options ? { options } : {}), ...(type === 'drag' || type === 'mright' ? { label } : {}), ...(type === 'audio' ? { src } : {}) }));
+      const fields = b.fields.map(({ id, page, x, y, w, h, type, options, label, src, group }) => ({ id, page, x, y, w, h, type, ...(options ? { options } : {}), ...(type === 'drag' || type === 'mright' ? { label } : {}), ...(type === 'audio' ? { src } : {}), ...(type === 'tick' && group ? { group } : {}) }));
       const payload = { ...m, pages: b.pages, fields };
       let id = b.id, res;
       if (id) res = await app.sb.from('worksheets').update(payload).eq('id', id);

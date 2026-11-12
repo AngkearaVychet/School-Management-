@@ -95,3 +95,4 @@
 .ws-audio.playing { background: #f59e0b; animation: ws-pulse 1s ease-in-out infinite; }
 @keyframes ws-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(245,158,11,.55); } 50% { box-shadow: 0 0 0 10px rgba(245,158,11,0); } }
 .ws-lines line.answer { stroke: #10b981; stroke-dasharray: 8 6; stroke-width: 2.5; opacity: .9; }
+.ws-tick.ws-should { border-color: #10b981 !important; border-style: dashed !important; border-width: 3px; background: rgba(209,250,229,.5) !important; }
