@@ -534,6 +534,7 @@
       let x = String(t ?? '').replace(/[​‌‍﻿]/g, '').replace(/\s+/g, ' ').toLowerCase().replace(/[០-៩]/g, d => '០១២៣៤៥៦៧៨៩'.indexOf(d));
       if (/^[0-9][0-9 ]*(\.[0-9]+)?$/.test(x.trim())) x = x.replace(/ /g, '');           // 3 000 000 = 3000000
       if (/^[0-9]{1,3}(,[0-9]{3})+(\.[0-9]+)?$/.test(x.trim())) x = x.replace(/,/g, ''); // 3,000,000
+      if (/^[0-9]+\.[0-9]+$/.test(x.trim())) x = x.trim().replace(/0+$/, '').replace(/\.$/, '');    // 1.50 = 1.5
       return x.trim().replace(/^[ .។,]+|[ .។,]+$/g, '');
     };
     const results = {}, groups = {}; let score = 0, total = 0;
