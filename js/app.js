@@ -65,7 +65,15 @@
     return null;
   };
   // a classroom teacher only sees the grades they teach (lessons, worksheets)
-  const viewGrades = () => (state.me && state.me.role === 'teacher' && (state.me.teach_grades || []).length) ? state.me.teach_grades : null;
+  // students see only their own grade, parents only their children's grades
+  const viewGrades = () => {
+    const me = state.me; if (!me) return null;
+    if (me.role === 'teacher' && (me.teach_grades || []).length) return me.teach_grades;
+    if (me.role === 'student') return me.grade ? [me.grade] : [];
+    if (me.role === 'parent') return [...new Set((state.children || []).map(c => c.grade).filter(Boolean))];
+    return null;
+  };
+  const viewAllLabel = () => state.me && state.me.role === 'parent' ? 'គ្រប់ថ្នាក់របស់កូន' : 'គ្រប់ថ្នាក់របស់ខ្ញុំ';
   const fixGradeFilter = (f) => { const vg = viewGrades(); if (vg && !vg.includes(f.grade)) f.grade = vg.length === 1 ? vg[0] : ''; };
   const canManageGrade = (g) => state.me.role === 'admin' || (state.me.role === 'head' && myGrades().includes(g));
   function linkify(text) {
@@ -327,7 +335,7 @@
           <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
           <input id="fQ" type="search" value="${esc(state.filter.q)}" placeholder="ស្វែងរកមេរៀន..." class="field pl-9">
         </div>
-        ${gradeLocked ? '' : `<select id="fGrade" class="field sm:w-56">${gradeOptions(state.filter.grade, viewGrades() ? { includeAll: viewGrades().length > 1, allLabel: 'គ្រប់ថ្នាក់របស់ខ្ញុំ', only: viewGrades() } : { includeAll: true })}</select>`}
+        ${gradeLocked ? '' : `<select id="fGrade" class="field sm:w-56">${gradeOptions(state.filter.grade, viewGrades() ? { includeAll: viewGrades().length > 1, allLabel: viewAllLabel(), only: viewGrades() } : { includeAll: true })}</select>`}
       </div>
       <div id="subjectChips" class="flex gap-2 overflow-x-auto no-scrollbar pb-1 mb-5"></div>
       <div id="lessonGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>`;
@@ -1020,7 +1028,7 @@
 
   // shared helpers for js/worksheets.js
   window.App = { sb, CFG, state, $, esc, toast, errMsg, openModal, closeModal, modalHeader, gradeOptions, subjectOf, SUBJECT_COLORS,
-    isStaff, myGrades, viewGrades, fixGradeFilter, canManageGrade, loading, emptyBox, statCard, fmtDate, fmtDateTime, fmtDuration, loadLessons, linkify };
+    isStaff, myGrades, viewGrades, viewAllLabel, fixGradeFilter, canManageGrade, loading, emptyBox, statCard, fmtDate, fmtDateTime, fmtDuration, loadLessons, linkify };
 
   boot().catch((e) => { console.error(e); showLogin(); });
 })();

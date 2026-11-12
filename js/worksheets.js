@@ -226,7 +226,7 @@
           <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
           <input id="wsQ" type="search" value="${esc(filter.q)}" placeholder="ស្វែងរកកិច្ចការ..." class="field pl-9">
         </div>
-        ${me.role === 'student' ? '' : `<select id="wsGrade" class="field sm:w-56">${app.gradeOptions(filter.grade, vg ? { includeAll: vg.length > 1, allLabel: 'គ្រប់ថ្នាក់របស់ខ្ញុំ', only: vg } : { includeAll: true })}</select>`}
+        ${me.role === 'student' ? '' : `<select id="wsGrade" class="field sm:w-56">${app.gradeOptions(filter.grade, vg ? { includeAll: vg.length > 1, allLabel: app.viewAllLabel(), only: vg } : { includeAll: true })}</select>`}
         <select id="wsSubject" class="field sm:w-48"><option value="">គ្រប់មុខវិជ្ជា</option>${app.CFG.SUBJECTS.map(s => `<option value="${s.id}" ${filter.subject === s.id ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select>
       </div>
       <div id="wsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>`;
