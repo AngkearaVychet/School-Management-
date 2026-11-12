@@ -26,17 +26,37 @@
   // Google Drive share link → direct stream link
   const audioUrl = (src) => { const m = String(src || '').match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:.*&)?id=)([A-Za-z0-9_-]+)/); return m ? `https://drive.google.com/uc?export=download&id=${m[1]}` : src; };
   let currentAudio = null;
-  const stopAudio = () => { if (currentAudio) { currentAudio.a.pause(); currentAudio.el.classList.remove('playing'); currentAudio = null; } };
+  const stopAudio = () => { if (currentAudio) { currentAudio.a.pause(); currentAudio.el.classList.remove('playing'); currentAudio = null; } try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) { /* ignore */ } };
+  // "say:apple" → the device reads the text aloud (text-to-speech); language from "say:zh:你好" / "say:km:..." (default English)
+  function playSource(src, el, onEnd) {
+    const m = String(src || '').match(/^say:(?:(en|zh|km):)?([\s\S]+)$/);
+    if (m) {
+      if (!window.speechSynthesis) return Promise.reject(new Error('no tts'));
+      const lang = { en: 'en-US', zh: 'zh-CN', km: 'km-KH' }[m[1] || 'en'];
+      const u = new SpeechSynthesisUtterance(m[2]);
+      u.lang = lang; u.rate = 0.8;
+      const v = speechSynthesis.getVoices().find(x => x.lang && x.lang.replace('_', '-').toLowerCase().startsWith(lang.slice(0, 2)) && /female|samantha|google|zira|aria|jenny/i.test(x.name))
+        || speechSynthesis.getVoices().find(x => x.lang && x.lang.toLowerCase().startsWith(lang.slice(0, 2)));
+      if (v) u.voice = v;
+      u.onend = onEnd; u.onerror = onEnd;
+      speechSynthesis.cancel(); speechSynthesis.speak(u);
+      currentAudio = { a: { pause: () => speechSynthesis.cancel() }, el };
+      return Promise.resolve();
+    }
+    const a = new Audio(audioUrl(src));
+    currentAudio = { a, el };
+    a.addEventListener('ended', onEnd);
+    return a.play();
+  }
+  try { window.speechSynthesis && speechSynthesis.getVoices(); } catch (e) { /* warm up voice list */ }
   function setupAudio(root) {
     root.querySelectorAll('.ws-audio').forEach(el => el.addEventListener('click', (e) => {
       e.preventDefault(); e.stopPropagation();
       if (currentAudio && currentAudio.el === el) { stopAudio(); return; }
       stopAudio();
-      const a = new Audio(audioUrl(el.dataset.src));
-      currentAudio = { a, el };
       el.classList.add('playing');
-      a.addEventListener('ended', () => { if (currentAudio && currentAudio.a === a) stopAudio(); });
-      a.play().catch(() => { stopAudio(); A().toast('មិនអាចចាក់សំឡេងបានទេ — សូមពិនិត្យ Internet ឬ Link សំឡេង', 'error'); });
+      const done = () => { el.classList.remove('playing'); if (currentAudio && currentAudio.el === el) currentAudio = null; };
+      playSource(el.dataset.src, el, done).catch(() => { done(); A().toast('មិនអាចចាក់សំឡេងបានទេ — សូមពិនិត្យ Internet ឬ Link សំឡេង', 'error'); });
     }));
   }
   // left dot id → right dot id, derived from answers (answer = label of the right dot)
@@ -783,7 +803,7 @@
       if (f.type === 'date') return 'កាលបរិច្ឆេទ (ស្វ័យប្រវត្តិ)';
       if (f.type === 'mleft') return b.answers[f.id] ? '● → ' + b.answers[f.id] : '● ?';
       if (f.type === 'mright') return '◎ ' + (f.label || '?');
-      if (f.type === 'audio') return f.src ? '🔊 មានសំឡេង' : '🔊 ?';
+      if (f.type === 'audio') return f.src ? (f.src.startsWith('say:') ? '🔊 ' + f.src.replace(/^say:(en:|zh:|km:)?/, '') : '🔊 មានសំឡេង') : '🔊 ?';
       return '';
     };
     const drawFields = () => {
@@ -899,7 +919,9 @@
             <button type="button" data-act="rec" class="btn-ghost-sm"><i class="fa-solid fa-microphone text-red-600"></i> <span>ថតសំឡេង</span></button>
             ${f.src ? `<button type="button" data-act="play" class="btn-ghost-sm"><i class="fa-solid fa-play text-teal-600"></i> ស្តាប់</button>` : ''}
           </div>
-          <input data-prop="src" class="field" value="${esc(f.src || '')}" placeholder="ឬបិទភ្ជាប់ Link សំឡេង (https://...)">
+          <input data-prop="say" class="field" value="${esc((f.src || '').startsWith('say:') ? f.src.replace(/^say:(en:|zh:|km:)?/, '') : '')}" placeholder="ឬវាយពាក្យ/ប្រយោគ ឱ្យឧបករណ៍អានឮៗ (ឧ. apple)">
+          <select data-prop="sayLang" class="field" style="max-width:200px">${[['en', 'អានជាភាសាអង់គ្លេស'], ['zh', 'អានជាភាសាចិន'], ['km', 'អានជាភាសាខ្មែរ']].map(([k, t]) => `<option value="${k}" ${((f.src || '').match(/^say:(en|zh|km):/) || [, 'en'])[1] === k ? 'selected' : ''}>${t}</option>`).join('')}</select>
+          <input data-prop="src" class="field" value="${esc((f.src || '').startsWith('say:') ? '' : f.src || '')}" placeholder="ឬបិទភ្ជាប់ Link សំឡេង (https://...)">
           <p data-audio-msg class="text-[11px] text-slate-500"></p></div>`;
       panel.innerHTML = `<div class="flex flex-wrap items-end gap-3">
         <span class="text-sm font-bold whitespace-nowrap pb-2" style="color:${t.color}"><i class="fa-solid ${t.icon}"></i> ${t.label}</span>
@@ -918,6 +940,10 @@
           for (const z of b.fields) if (z.type === target && b.answers[z.id] === old && old && (target === 'drop' || z.page === f.page)) b.answers[z.id] = f.label;
         }
         if (prop === 'src') { f.src = el.value.trim(); if (e.type === 'change') drawProps(); }
+        if (prop === 'say' || prop === 'sayLang') {
+          const txt = panel.querySelector('[data-prop=say]').value.trim(), lg = panel.querySelector('[data-prop=sayLang]').value;
+          f.src = txt ? `say:${lg === 'en' ? '' : lg + ':'}${txt}` : ''; if (e.type === 'change') drawProps();
+        }
         if (prop === 'options') {
           f.options = el.value.split('/').map(o => o.trim()).filter(Boolean);
           if (e.type === 'change') { if (b.answers[f.id] && !f.options.includes(b.answers[f.id])) delete b.answers[f.id]; drawProps(); }
@@ -936,8 +962,7 @@
       panel.onclick = async (e) => {
         const a = e.target.closest('[data-act]'); if (!a) return;
         if (a.dataset.act === 'play') {
-          stopAudio(); const au = new Audio(audioUrl(f.src)); currentAudio = { a: au, el: a };
-          au.play().catch(() => app.toast('មិនអាចចាក់សំឡេងបានទេ — សូមពិនិត្យ Link', 'error'));
+          stopAudio(); playSource(f.src, a, () => {}).catch(() => app.toast('មិនអាចចាក់សំឡេងបានទេ — សូមពិនិត្យ Link', 'error'));
           return;
         }
         if (a.dataset.act === 'rec') {
