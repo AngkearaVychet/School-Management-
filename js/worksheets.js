@@ -15,10 +15,108 @@
     drag:   { label: 'ពាក្យសម្រាប់អូស', icon: 'fa-hand-pointer',  color: '#d97706' },
     drop:   { label: 'ចន្លោះទម្លាក់',  icon: 'fa-inbox',           color: '#dc2626' },
     name:   { label: 'ឈ្មោះសិស្ស',    icon: 'fa-id-badge',        color: '#0891b2', auto: true },
-    date:   { label: 'កាលបរិច្ឆេទ',   icon: 'fa-calendar-day',    color: '#0891b2', auto: true }
+    date:   { label: 'កាលបរិច្ឆេទ',   icon: 'fa-calendar-day',    color: '#0891b2', auto: true },
+    mleft:  { label: 'ចំណុចផ្គូផ្គង (សំណួរ)', icon: 'fa-circle-dot', color: '#db2777' },
+    mright: { label: 'ចំណុចផ្គូផ្គង (ចម្លើយ)', icon: 'fa-bullseye',  color: '#9333ea' },
+    audio:  { label: 'សំឡេង 🔊',      icon: 'fa-volume-high',     color: '#0d9488' }
   };
-  // fields that are scored (not drag words, not auto-filled name/date)
-  const isQ = (f) => !['drag', 'name', 'date'].includes(f.type);
+  // fields that are scored (not drag words, answer dots, audio or auto-filled name/date)
+  const isQ = (f) => !['drag', 'name', 'date', 'mright', 'audio'].includes(f.type);
+  const MATCH_LABELS = ['ក', 'ខ', 'គ', 'ឃ', 'ង', 'ច', 'ឆ', 'ជ', 'ឈ', 'ញ', 'ដ', 'ឋ', 'ឌ', 'ឍ', 'ណ', 'ត', 'ថ', 'ទ', 'ធ', 'ន'];
+  // Google Drive share link → direct stream link
+  const audioUrl = (src) => { const m = String(src || '').match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:.*&)?id=)([A-Za-z0-9_-]+)/); return m ? `https://drive.google.com/uc?export=download&id=${m[1]}` : src; };
+  let currentAudio = null;
+  const stopAudio = () => { if (currentAudio) { currentAudio.a.pause(); currentAudio.el.classList.remove('playing'); currentAudio = null; } };
+  function setupAudio(root) {
+    root.querySelectorAll('.ws-audio').forEach(el => el.addEventListener('click', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      if (currentAudio && currentAudio.el === el) { stopAudio(); return; }
+      stopAudio();
+      const a = new Audio(audioUrl(el.dataset.src));
+      currentAudio = { a, el };
+      el.classList.add('playing');
+      a.addEventListener('ended', () => { if (currentAudio && currentAudio.a === a) stopAudio(); });
+      a.play().catch(() => { stopAudio(); A().toast('មិនអាចចាក់សំឡេងបានទេ — សូមពិនិត្យ Internet ឬ Link សំឡេង', 'error'); });
+    }));
+  }
+  // left dot id → right dot id, derived from answers (answer = label of the right dot)
+  function pairsFromAnswers(w, answers) {
+    const fields = w.fields || [], out = {};
+    for (const f of fields) {
+      if (f.type !== 'mleft' || !answers || !answers[f.id]) continue;
+      const r = fields.find(x => x.type === 'mright' && x.page === f.page && x.label === answers[f.id]);
+      if (r) out[f.id] = r.id;
+    }
+    return out;
+  }
+  const centre = (f) => [(f.x + f.w / 2) * 100, (f.y + f.h / 2) * 100];
+  function drawMatchLines(root, w, pairs, results, correct = {}) {
+    const byId = Object.fromEntries((w.fields || []).map(f => [f.id, f]));
+    root.querySelectorAll('svg.ws-lines').forEach(svg => {
+      const pi = +svg.dataset.page;
+      svg.innerHTML = Object.entries(pairs).filter(([l]) => byId[l] && byId[l].page === pi).map(([l, r]) => {
+        const [x1, y1] = centre(byId[l]), [x2, y2] = centre(byId[r]);
+        const cls = results && l in results ? (results[l] ? 'ok' : 'bad') : '';
+        return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="${cls}"/>`;
+      }).join('') + Object.entries(correct).filter(([l]) => byId[l] && byId[l].page === pi).map(([l, r]) => {
+        const [x1, y1] = centre(byId[l]), [x2, y2] = centre(byId[r]);
+        return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="answer"/>`;
+      }).join('');
+    });
+    const linked = new Set([...Object.keys(pairs), ...Object.values(pairs)]);
+    root.querySelectorAll('.ws-mdot').forEach(d => d.classList.toggle('linked', linked.has(d.dataset.fid || d.dataset.mr)));
+  }
+  // interactive line drawing: drag from one dot to a dot on the other side, or tap one then the other
+  function setupMatch(root, w, state) {
+    const dots = [...root.querySelectorAll('.ws-mdot')];
+    if (!dots.length) return;
+    const byId = Object.fromEntries((w.fields || []).map(f => [f.id, f]));
+    const idOf = (el) => el.dataset.fid || el.dataset.mr;
+    const redraw = () => drawMatchLines(root, w, pairsFromAnswers(w, state.answers), null);
+    const connect = (a, b) => {
+      const fa = byId[idOf(a)], fb = byId[idOf(b)];
+      if (!fa || !fb || fa.type === fb.type || fa.page !== fb.page) return;
+      const left = fa.type === 'mleft' ? fa : fb, right = fa.type === 'mleft' ? fb : fa;
+      state.answers[left.id] = right.label;
+      redraw();
+    };
+    const clearLeft = (el) => { const f = byId[idOf(el)]; if (f && f.type === 'mleft') { delete state.answers[f.id]; redraw(); } };
+    const select = (el) => { dots.forEach(d => d.classList.toggle('active', d === el)); state.selDot = el; };
+    const hit = (x, y, from) => dots.find(d => {
+      if (d === from) return false;
+      const r = d.getBoundingClientRect(), pad = Math.max(10, r.width * 0.3);
+      return x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad;
+    });
+    dots.forEach(el => {
+      el.addEventListener('pointerdown', (e) => {
+        if (state.done || e.button > 0) return;
+        e.preventDefault();
+        el.setPointerCapture(e.pointerId);
+        const pageEl = el.closest('.ws-page'), svg = pageEl.querySelector('svg.ws-lines');
+        const f = byId[idOf(el)], [cx, cy] = centre(f);
+        const st = { x: e.clientX, y: e.clientY, moved: false, line: null };
+        const move = (ev) => {
+          if (!st.moved && Math.hypot(ev.clientX - st.x, ev.clientY - st.y) < 6) return;
+          st.moved = true;
+          if (!st.line) { st.line = document.createElementNS('http://www.w3.org/2000/svg', 'line'); st.line.setAttribute('class', 'temp'); st.line.setAttribute('x1', cx); st.line.setAttribute('y1', cy); svg.appendChild(st.line); }
+          const r = pageEl.getBoundingClientRect();
+          st.line.setAttribute('x2', (ev.clientX - r.left) / r.width * 100); st.line.setAttribute('y2', (ev.clientY - r.top) / r.height * 100);
+        };
+        const up = (ev) => {
+          el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up);
+          if (st.line) st.line.remove();
+          if (st.moved) {
+            const t = hit(ev.clientX, ev.clientY, el);
+            if (t) connect(el, t); else clearLeft(el);
+            select(null);
+          } else if (state.selDot && state.selDot !== el && byId[idOf(state.selDot)].type !== f.type) {
+            connect(state.selDot, el); select(null);
+          } else select(state.selDot === el ? null : el);
+        };
+        el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+      });
+    });
+  }
   const KM_DIGITS = '០១២៣៤៥៦៧៨៩';
   const KM_MONTHS = ['មករា', 'កុម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា', 'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'];
   const kmNum = (n) => String(n).replace(/\d/g, d => KM_DIGITS[d]);
@@ -224,6 +322,7 @@
     const pagesHtml = (w.pages || []).map((p, pi) => `
       <div class="ws-page relative mx-auto mb-4 shadow-md rounded-lg overflow-hidden bg-white select-none" data-page="${pi}" style="max-width:${Math.min(p.w, 1100)}px">
         <img src="${esc(p.url)}" alt="ទំព័រ ${pi + 1}" class="block w-full pointer-events-none" draggable="false">
+        ${fields.some(f => f.page === pi && f.type === 'mleft') ? `<svg class="ws-lines" data-page="${pi}" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>` : ''}
         ${fields.filter(f => f.page === pi).map(f => playerFieldHtml(f, p)).join('')}
       </div>`).join('');
 
@@ -245,15 +344,18 @@
         ${w.instructions ? `<div class="max-w-3xl mx-auto mb-4 text-sm text-slate-700 bg-white rounded-xl p-3 border border-slate-200"><i class="fa-solid fa-circle-info text-blue-700 mr-1"></i>${app.linkify(w.instructions)}</div>` : ''}
         <div id="wsPages">${pagesHtml || app.emptyBox('fa-image', 'កិច្ចការនេះមិនទាន់មានទំព័រ')}</div>
         ${mode !== 'view' && fields.some(f => f.type === 'drag') ? `<p class="text-center text-xs text-slate-500 mt-1"><i class="fa-solid fa-hand-pointer"></i> អូសពាក្យទៅដាក់ក្នុងចន្លោះ (ឬចុចពាក្យ រួចចុចចន្លោះ)</p>` : ''}
+        ${mode !== 'view' && fields.some(f => f.type === 'mleft') ? `<p class="text-center text-xs text-slate-500 mt-1"><i class="fa-solid fa-circle-dot text-pink-600"></i> គូសបន្ទាត់៖ អូសពីចំណុចមួយទៅចំណុចម្ខាងទៀត (ឬចុចចំណុចមួយ រួចចុចចំណុចម្ខាងទៀត)។ អូសចេញទៅកន្លែងទំនេរ ដើម្បីលុបបន្ទាត់។</p>` : ''}
+        ${fields.some(f => f.type === 'audio') ? `<p class="text-center text-xs text-slate-500 mt-1"><i class="fa-solid fa-volume-high text-teal-600"></i> ចុចប៊ូតុង 🔊 ដើម្បីស្តាប់ (ចុចម្តងទៀតដើម្បីឈប់)</p>` : ''}
       </div>`, {
       full: true,
       beforeClose: () => (mode === 'student' && !state.done && Object.keys(state.answers).length) ? confirm('អ្នកមិនទាន់ចុច «បញ្ចប់» ទេ។ ចាកចេញដោយមិនរក្សាទុក?') : true,
-      onClose: () => clearInterval(state.timer)
+      onClose: () => { clearInterval(state.timer); stopAudio(); }
     });
 
     const root = app.$('#modalBox');
     root.querySelectorAll('.ws-page').forEach(watchPageWidth);
     fillAuto(root, mode === 'view' ? '' : app.state.me.full_name, null);
+    setupAudio(root);
     state.timer = setInterval(() => { if (document.visibilityState === 'visible') state.seconds++; }, 1000);
     if (mode === 'view') { root.querySelectorAll('.ws-field input, .ws-field select, .ws-field button').forEach(el => el.disabled = true); return; }
 
@@ -267,6 +369,7 @@
       state.answers[el.dataset.fid] = on;
     }));
     setupDragDrop(root, w, state);
+    setupMatch(root, w, state);
 
     app.$('#wsFinish').addEventListener('click', () => finish(w, mode, state, root));
   }
@@ -278,6 +381,9 @@
     if (f.type === 'tick') return `<button type="button" class="ws-field ws-tick" data-type="tick" data-fid="${f.id}" aria-pressed="false" aria-label="ធីក" style="${st}"><i class="fa-solid fa-check"></i></button>`;
     if (f.type === 'drop') return `<div class="ws-field ws-drop" data-type="drop" data-fid="${f.id}" style="${st}"></div>`;
     if (f.type === 'name' || f.type === 'date') return `<div class="ws-auto" data-auto="${f.type}" style="${st}"></div>`;
+    if (f.type === 'mleft') return `<div class="ws-field ws-mdot ws-mleft" data-type="mleft" data-fid="${f.id}" style="${st}" role="button" aria-label="ចំណុចសំណួរ"><span></span></div>`;
+    if (f.type === 'mright') return `<div class="ws-mdot ws-mright" data-mr="${f.id}" style="${st}" role="button" aria-label="ចំណុចចម្លើយ"><span></span></div>`;
+    if (f.type === 'audio') return `<button type="button" class="ws-audio" data-src="${esc(f.src || '')}" style="${st}" aria-label="ស្តាប់សំឡេង"><i class="fa-solid fa-volume-high"></i></button>`;
     if (f.type === 'drag') return `<div class="ws-hole" style="${st}"></div><div class="ws-drag" data-fid="${f.id}" data-label="${esc(f.label || '')}" data-home-style="${esc(st + cropStyle(f, page))}" style="${st}${cropStyle(f, page)}" role="button" tabindex="0" aria-label="${esc(f.label || 'ពាក្យ')}"></div>`;
     return '';
   }
@@ -410,13 +516,19 @@
       el.classList.add(ok ? 'ws-ok' : 'ws-bad');
       el.querySelectorAll('input,select').forEach(i => i.disabled = true);
       if (el.tagName === 'BUTTON') el.disabled = true;
-      if (!ok && keys && keys[id] !== undefined) {
-        const f = (w.fields || []).find(x => x.id === id);
+      const f0 = (w.fields || []).find(x => x.id === id);
+      if (!ok && keys && keys[id] !== undefined && f0 && f0.type !== 'mleft') {
+        const f = f0;
         let txt = f.type === 'tick' ? (keys[id] === true ? 'ត្រូវធីក ✓' : 'មិនត្រូវធីក') : String(keys[id]).split('/')[0];
         el.insertAdjacentHTML('beforeend', `<span class="ws-correct">${esc(txt)}</span>`);
       }
     });
     root.querySelectorAll('.ws-drag').forEach(d => d.classList.add('locked'));
+    if (root.querySelector('svg.ws-lines')) {
+      const correct = {};
+      if (keys) { const kp = pairsFromAnswers(w, keys); for (const l in kp) if (results && results[l] === false) correct[l] = kp[l]; }
+      drawMatchLines(root, w, pairsFromAnswers(w, answers), results, correct);
+    }
   }
 
   function showResultBar(w, out, mode) {
@@ -669,6 +781,9 @@
       if (f.type === 'drop') return b.answers[f.id] ? '⇣ ' + b.answers[f.id] : '⇣ ?';
       if (f.type === 'name') return 'ឈ្មោះសិស្ស (ស្វ័យប្រវត្តិ)';
       if (f.type === 'date') return 'កាលបរិច្ឆេទ (ស្វ័យប្រវត្តិ)';
+      if (f.type === 'mleft') return b.answers[f.id] ? '● → ' + b.answers[f.id] : '● ?';
+      if (f.type === 'mright') return '◎ ' + (f.label || '?');
+      if (f.type === 'audio') return f.src ? '🔊 មានសំឡេង' : '🔊 ?';
       return '';
     };
     const drawFields = () => {
@@ -679,6 +794,15 @@
         pageEl.insertAdjacentHTML('beforeend', `<div class="b-field ${b.selected === f.id ? 'sel' : ''}" data-fid="${f.id}" style="${boxStyle(f, b.pages[f.page])};--c:${t.color}">
           <span class="b-field-label">${esc(fieldLabel(f))}</span><span class="b-handle" data-handle></span></div>`);
       }
+      // preview of the answer-key lines for matching dots
+      root.querySelectorAll('.b-page').forEach(pageEl => {
+        let svg = pageEl.querySelector('svg.b-lines');
+        if (!svg) { pageEl.insertAdjacentHTML('afterbegin', '<svg class="b-lines" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>'); svg = pageEl.querySelector('svg.b-lines'); }
+        const pi = +pageEl.dataset.page;
+        const pairs = pairsFromAnswers({ fields: b.fields }, b.answers);
+        const byId = Object.fromEntries(b.fields.map(f => [f.id, f]));
+        svg.innerHTML = Object.entries(pairs).filter(([l]) => byId[l].page === pi).map(([l, r]) => { const [x1, y1] = centre(byId[l]), [x2, y2] = centre(byId[r]); return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`; }).join('');
+      });
     };
 
     const pointerPos = (pageEl, e) => { const r = pageEl.getBoundingClientRect(); return { x: clamp((e.clientX - r.left) / r.width, 0, 1), y: clamp((e.clientY - r.top) / r.height, 0, 1) }; };
@@ -703,6 +827,8 @@
           f = { id: uid(), page: pi, x: round4(p0.x), y: round4(p0.y), w: 0, h: 0, type: b.tool };
           if (f.type === 'select') f.options = [];
           if (f.type === 'drag') f.label = '';
+          if (f.type === 'mright') { const used = new Set(b.fields.filter(x => x.type === 'mright' && x.page === pi).map(x => x.label)); f.label = MATCH_LABELS.find(l => !used.has(l)) || String(used.size + 1); }
+          if (f.type === 'audio') f.src = '';
           b.fields.push(f); b.selected = f.id;
         } else { b.selected = null; drawFields(); drawProps(); return; }
 
@@ -723,7 +849,7 @@
           if (mode === 'create') {
             const page = b.pages[pi], ratio = page.w / page.h;
             if (f.w < 0.012 || f.h < 0.008) { // a click: drop a default-size box
-              const def = f.type === 'tick' ? [0.035, 0.035 * ratio] : f.type === 'drag' ? [0.12, 0.035 * ratio] : (f.type === 'name' || f.type === 'date') ? [0.25, 0.03 * ratio] : [0.18, 0.035 * ratio];
+              const def = (f.type === 'mleft' || f.type === 'mright') ? [0.028, 0.028 * ratio] : f.type === 'audio' ? [0.045, 0.045 * ratio] : f.type === 'tick' ? [0.035, 0.035 * ratio] : f.type === 'drag' ? [0.12, 0.035 * ratio] : (f.type === 'name' || f.type === 'date') ? [0.25, 0.03 * ratio] : [0.18, 0.035 * ratio];
               f.w = round4(Math.min(def[0], 1 - f.x)); f.h = round4(Math.min(def[1], 1 - f.y));
             }
             setTimeout(() => { const inp = app.$('#bProps [data-autofocus]'); if (inp) inp.focus(); }, 30);
@@ -757,6 +883,24 @@
       if (f.type === 'drop') inner = `<label class="flex-1 min-w-[200px]"><span class="label">ពាក្យដែលត្រូវទម្លាក់ចូល</span>
           <select data-prop="answer" data-autofocus class="field mt-0.5"><option value="">— ជ្រើសពាក្យ —</option>${dragLabels().map(l => `<option ${b.answers[f.id] === l ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>
           ${dragLabels().length ? '' : '<span class="text-[11px] text-amber-700">គូសប្រអប់ «ពាក្យសម្រាប់អូស» ជាមុនសិន</span>'}</label>`;
+      if (f.type === 'mleft') {
+        const rights = b.fields.filter(x => x.type === 'mright' && x.page === f.page && x.label);
+        inner = `<label class="flex-1 min-w-[200px]"><span class="label">ភ្ជាប់ទៅចំណុចចម្លើយ (ចម្លើយត្រូវ)</span>
+          <select data-prop="answer" data-autofocus class="field mt-0.5"><option value="">— ជ្រើស —</option>${rights.map(r => `<option ${b.answers[f.id] === r.label ? 'selected' : ''}>${esc(r.label)}</option>`).join('')}</select>
+          ${rights.length ? '' : '<span class="text-[11px] text-amber-700">គូសប្រអប់ «ចំណុចផ្គូផ្គង (ចម្លើយ)» នៅទំព័រដដែលជាមុនសិន</span>'}</label>`;
+      }
+      if (f.type === 'mright') inner = `<label class="min-w-[160px]"><span class="label">ឈ្មោះចំណុច (ឧ. ក ខ គ)</span>
+          <input data-prop="label" data-autofocus class="field mt-0.5" value="${esc(f.label || '')}" maxlength="20"></label>
+        <p class="text-xs text-slate-500 flex-1 min-w-[200px] pb-2">ដាក់ចំណុចនេះនៅជាប់ពាក្យ/រូបចម្លើយ។ បន្ទាប់មកចុចលើ «ចំណុចសំណួរ» ហើយជ្រើសឈ្មោះនេះជាចម្លើយត្រូវ។ សិស្សមិនឃើញឈ្មោះនេះទេ។</p>`;
+      if (f.type === 'audio') inner = `<div class="flex-1 min-w-[240px] space-y-1.5">
+          <span class="label">សំឡេង <span class="font-normal text-slate-400">(MP3/M4A ≤ 20MB, ឬ Link Google Drive ដែល Share «Anyone with the link»)</span></span>
+          <div class="flex flex-wrap gap-1.5">
+            <label class="btn-ghost-sm cursor-pointer"><i class="fa-solid fa-upload"></i> Upload<input type="file" accept="audio/*" data-audio-file class="hidden"></label>
+            <button type="button" data-act="rec" class="btn-ghost-sm"><i class="fa-solid fa-microphone text-red-600"></i> <span>ថតសំឡេង</span></button>
+            ${f.src ? `<button type="button" data-act="play" class="btn-ghost-sm"><i class="fa-solid fa-play text-teal-600"></i> ស្តាប់</button>` : ''}
+          </div>
+          <input data-prop="src" class="field" value="${esc(f.src || '')}" placeholder="ឬបិទភ្ជាប់ Link សំឡេង (https://...)">
+          <p data-audio-msg class="text-[11px] text-slate-500"></p></div>`;
       panel.innerHTML = `<div class="flex flex-wrap items-end gap-3">
         <span class="text-sm font-bold whitespace-nowrap pb-2" style="color:${t.color}"><i class="fa-solid ${t.icon}"></i> ${t.label}</span>
         ${inner}
@@ -770,16 +914,54 @@
         if (prop === 'tick') { if (el.checked) b.answers[f.id] = true; else delete b.answers[f.id]; }
         if (prop === 'label') {
           const old = f.label; f.label = el.value.trim();
-          for (const z of b.fields) if (z.type === 'drop' && b.answers[z.id] === old && old) b.answers[z.id] = f.label;
+          const target = f.type === 'mright' ? 'mleft' : 'drop';
+          for (const z of b.fields) if (z.type === target && b.answers[z.id] === old && old && (target === 'drop' || z.page === f.page)) b.answers[z.id] = f.label;
         }
+        if (prop === 'src') { f.src = el.value.trim(); if (e.type === 'change') drawProps(); }
         if (prop === 'options') {
           f.options = el.value.split('/').map(o => o.trim()).filter(Boolean);
           if (e.type === 'change') { if (b.answers[f.id] && !f.options.includes(b.answers[f.id])) delete b.answers[f.id]; drawProps(); }
         }
         b.dirty = true; drawFields();
       };
-      panel.onclick = (e) => {
+      const fileInp = panel.querySelector('[data-audio-file]');
+      if (fileInp) fileInp.onchange = async () => {
+        const file = fileInp.files[0]; if (!file) return;
+        const msg = panel.querySelector('[data-audio-msg]');
+        if (file.size > 20 * 1024 * 1024) return app.toast('ឯកសារសំឡេងធំពេក (≤ 20MB)', 'error');
+        msg.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> កំពុង Upload...';
+        try { f.src = await uploadAudio(file, file.name); b.dirty = true; drawFields(); drawProps(); app.toast('បាន Upload សំឡេង'); }
+        catch (err) { msg.innerHTML = `<span class="text-red-600">${esc(app.errMsg(err))}</span>`; }
+      };
+      panel.onclick = async (e) => {
         const a = e.target.closest('[data-act]'); if (!a) return;
+        if (a.dataset.act === 'play') {
+          stopAudio(); const au = new Audio(audioUrl(f.src)); currentAudio = { a: au, el: a };
+          au.play().catch(() => app.toast('មិនអាចចាក់សំឡេងបានទេ — សូមពិនិត្យ Link', 'error'));
+          return;
+        }
+        if (a.dataset.act === 'rec') {
+          const msg = panel.querySelector('[data-audio-msg]');
+          if (recorder) { recorder.stop(); return; }
+          if (!navigator.mediaDevices || !window.MediaRecorder) return app.toast('Browser នេះមិនគាំទ្រការថតសំឡេងទេ', 'error');
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const chunks = []; recorder = new MediaRecorder(stream);
+            recorder.ondataavailable = (ev) => { if (ev.data.size) chunks.push(ev.data); };
+            recorder.onstop = async () => {
+              stream.getTracks().forEach(t => t.stop());
+              const type = (recorder.mimeType || 'audio/webm').split(';')[0]; recorder = null;
+              const blob = new Blob(chunks, { type });
+              msg.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> កំពុង Upload...';
+              try { f.src = await uploadAudio(blob, 'rec.' + (type.includes('mp4') ? 'm4a' : type.includes('ogg') ? 'ogg' : 'webm')); b.dirty = true; drawFields(); drawProps(); app.toast('បានរក្សាទុកសំឡេង'); }
+              catch (err) { msg.innerHTML = `<span class="text-red-600">${esc(app.errMsg(err))}</span>`; }
+            };
+            recorder.start();
+            a.classList.add('bg-red-50'); a.querySelector('span').textContent = 'ឈប់ថត ■';
+            msg.innerHTML = '<span class="text-red-600"><i class="fa-solid fa-circle fa-beat"></i> កំពុងថត... ចុច «ឈប់ថត» ពេលរួច</span>';
+          } catch (err) { recorder = null; app.toast('មិនអាចប្រើ Microphone បានទេ — សូមអនុញ្ញាតក្នុង Browser', 'error'); }
+          return;
+        }
         if (a.dataset.act === 'del') removeSelected();
         if (a.dataset.act === 'dup') {
           const n = { ...JSON.parse(JSON.stringify(f)), id: uid(), y: round4(clamp(f.y + f.h + 0.01, 0, 1 - f.h)) };
@@ -860,6 +1042,13 @@
       if (missing.length) { b.selected = missing[0].id; drawFields(); drawProps(); return `មានប្រអប់ ${missing.length} មិនទាន់កំណត់ចម្លើយ (បានជ្រើសប្រអប់ដំបូងឱ្យ)`; }
       const noLabel = b.fields.filter(f => f.type === 'drag' && !f.label);
       if (noLabel.length) { b.selected = noLabel[0].id; drawFields(); drawProps(); return 'សូមវាយពាក្យសម្រាប់ប្រអប់ «ពាក្យសម្រាប់អូស»'; }
+      const rightsOn = (pg) => b.fields.filter(x => x.type === 'mright' && x.page === pg).map(x => x.label);
+      const badRight = b.fields.filter(f => f.type === 'mright' && (!f.label || rightsOn(f.page).filter(l => l === f.label).length > 1));
+      if (badRight.length) { b.selected = badRight[0].id; drawFields(); drawProps(); return 'ចំណុចចម្លើយនីមួយៗត្រូវមានឈ្មោះ ហើយមិនត្រូវជាន់គ្នា (ក្នុងទំព័រដដែល)'; }
+      const badLeft = b.fields.filter(f => f.type === 'mleft' && !rightsOn(f.page).includes(b.answers[f.id]));
+      if (badLeft.length) { b.selected = badLeft[0].id; drawFields(); drawProps(); return 'ចំណុចសំណួរត្រូវភ្ជាប់ទៅចំណុចចម្លើយដែលមាន'; }
+      const noAudio = b.fields.filter(f => f.type === 'audio' && !f.src);
+      if (noAudio.length) { b.selected = noAudio[0].id; drawFields(); drawProps(); return 'សូម Upload ឬថតសំឡេង សម្រាប់ប្រអប់សំឡេង'; }
       const badSel = b.fields.filter(f => f.type === 'select' && (f.options || []).length < 2);
       if (badSel.length) { b.selected = badSel[0].id; drawFields(); drawProps(); return 'Dropdown ត្រូវមានជម្រើសយ៉ាងតិច ២'; }
       return null;
@@ -872,7 +1061,7 @@
       const err = validate(m);
       if (err) return app.toast(err, 'error');
       const btn = app.$('#bSave'); btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-      const fields = b.fields.map(({ id, page, x, y, w, h, type, options, label }) => ({ id, page, x, y, w, h, type, ...(options ? { options } : {}), ...(type === 'drag' ? { label } : {}) }));
+      const fields = b.fields.map(({ id, page, x, y, w, h, type, options, label, src }) => ({ id, page, x, y, w, h, type, ...(options ? { options } : {}), ...(type === 'drag' || type === 'mright' ? { label } : {}), ...(type === 'audio' ? { src } : {}) }));
       const payload = { ...m, pages: b.pages, fields };
       let id = b.id, res;
       if (id) res = await app.sb.from('worksheets').update(payload).eq('id', id);
@@ -903,6 +1092,7 @@
       root2.querySelectorAll('.ws-field[data-type=select] select').forEach(sel => sel.addEventListener('change', () => { st.answers[sel.dataset.fid] = sel.value; }));
       root2.querySelectorAll('.ws-field[data-type=tick]').forEach(el => el.addEventListener('click', () => { if (st.done) return; const on = !el.classList.contains('ticked'); el.classList.toggle('ticked', on); st.answers[el.dataset.fid] = on; }));
       setupDragDrop(root2, temp, st);
+      setupMatch(root2, temp, st);
       const bar = app.$('#wsResultBar');
       bar.className = 'px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 bg-amber-50';
       bar.innerHTML = `<span class="text-sm text-amber-800"><i class="fa-solid fa-flask"></i> សាកល្បងធ្វើដូចសិស្ស (មិនរក្សាទុក)</span>
@@ -925,7 +1115,7 @@
     setTool('text');
     drawPages(); drawProps();
   }
-  let reopenAnswers = null;
+  let reopenAnswers = null, recorder = null;
 
   // ---------- upload helpers ----------
   function loadImage(src) {
@@ -939,6 +1129,15 @@
     if (error) throw error;
     const { data } = app.sb.storage.from('worksheets').getPublicUrl(path);
     return { url: data.publicUrl, w: canvas.width, h: canvas.height };
+  }
+  async function uploadAudio(blob, name) {
+    const app = A();
+    const ext = (String(name).match(/\.([a-z0-9]{2,4})$/i) || [, 'mp3'])[1].toLowerCase();
+    const type = (blob.type || 'audio/mpeg').split(';')[0];
+    const path = `${app.state.me.id}/audio-${Date.now()}-${uid()}.${ext}`;
+    const { error } = await app.sb.storage.from('worksheets').upload(path, blob, { contentType: type, cacheControl: '31536000' });
+    if (error) throw error;
+    return app.sb.storage.from('worksheets').getPublicUrl(path).data.publicUrl;
   }
   let pdfPromise = null;
   function loadPdfJs() {

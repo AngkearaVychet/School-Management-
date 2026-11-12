@@ -69,3 +69,29 @@
 .ws-auto { position: absolute; display: flex; align-items: flex-end; padding: 0 .3em .05em; white-space: nowrap; overflow: hidden;
   color: #1e3a8a; font-weight: 700; line-height: 1.1; background: rgba(255,255,255,.88); border-radius: 3px; pointer-events: none; }
 .ws-auto:empty { background: transparent; }
+
+/* matching lines (គូសបន្ទាត់ផ្គូផ្គង) */
+.ws-lines, .b-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.ws-lines { z-index: 3; }
+.b-lines { z-index: 1; }
+.ws-lines line, .b-lines line { stroke: #2563eb; stroke-width: 3.5; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.b-lines line { stroke: #db2777; stroke-dasharray: 6 5; stroke-width: 2.5; }
+.ws-lines line.temp { stroke: #db2777; stroke-dasharray: 7 5; }
+.ws-lines line.ok { stroke: #10b981; }
+.ws-lines line.bad { stroke: #ef4444; }
+.ws-mdot { position: absolute; z-index: 4; display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: none; }
+.ws-mdot span { width: 62%; height: 62%; min-width: 12px; min-height: 12px; border-radius: 9999px; background: #fff; border: 3px solid #db2777; box-shadow: 0 0 0 4px rgba(219,39,119,.15); transition: transform .12s, background .12s; }
+.ws-mright span { border-color: #9333ea; box-shadow: 0 0 0 4px rgba(147,51,234,.15); }
+.ws-mdot:hover span { transform: scale(1.2); }
+.ws-mdot.active span { transform: scale(1.35); background: #fde68a; border-color: #d97706; box-shadow: 0 0 0 6px rgba(217,119,6,.25); }
+.ws-mdot.linked span { background: #2563eb; border-color: #2563eb; }
+.ws-mdot.ws-ok span { background: #10b981; border-color: #10b981; }
+.ws-mdot.ws-bad span { background: #ef4444; border-color: #ef4444; }
+
+/* audio button (សំឡេង) */
+.ws-audio { position: absolute; z-index: 4; border-radius: 9999px; border: 0; padding: 0; cursor: pointer; background: #0d9488; color: #fff;
+  display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(13,148,136,.45); transition: transform .12s; }
+.ws-audio:hover { transform: scale(1.08); }
+.ws-audio.playing { background: #f59e0b; animation: ws-pulse 1s ease-in-out infinite; }
+@keyframes ws-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(245,158,11,.55); } 50% { box-shadow: 0 0 0 10px rgba(245,158,11,0); } }
+.ws-lines line.answer { stroke: #10b981; stroke-dasharray: 8 6; stroke-width: 2.5; opacity: .9; }
