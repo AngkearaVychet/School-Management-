@@ -145,9 +145,17 @@
   const KM_MONTHS = ['មករា', 'កុម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា', 'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'];
   const kmNum = (n) => String(n).replace(/\d/g, d => KM_DIGITS[d]);
   const kmDate = (d) => { d = d ? new Date(d) : new Date(); return `${kmNum(d.getDate())} ${KM_MONTHS[d.getMonth()]} ${kmNum(d.getFullYear())}`; };
-  function fillAuto(root, name, date) {
+  // the date follows the worksheet's language: English → "12 November 2026", Chinese → "2026年11月12日", otherwise Khmer
+  const EN_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  function sheetDate(date, subject) {
+    const d = date ? new Date(date) : new Date();
+    if (subject === 'english') return `${d.getDate()} ${EN_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+    if (subject === 'chinese') return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+    return kmDate(d);
+  }
+  function fillAuto(root, name, date, subject) {
     root.querySelectorAll('.ws-auto[data-auto=name]').forEach(el => { el.textContent = name || ''; });
-    root.querySelectorAll('.ws-auto[data-auto=date]').forEach(el => { el.textContent = kmDate(date); });
+    root.querySelectorAll('.ws-auto[data-auto=date]').forEach(el => { el.textContent = sheetDate(date, subject); });
   }
   const uid = () => Math.random().toString(36).slice(2, 9);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -378,7 +386,7 @@
 
     const root = app.$('#modalBox');
     root.querySelectorAll('.ws-page').forEach(watchPageWidth);
-    fillAuto(root, mode === 'view' ? '' : app.state.me.full_name, null);
+    fillAuto(root, mode === 'view' ? '' : app.state.me.full_name, null, w.subject);
     setupAudio(root);
     state.timer = setInterval(() => { if (document.visibilityState === 'visible') state.seconds++; }, 1000);
     if (mode === 'view') { root.querySelectorAll('.ws-field input, .ws-field select, .ws-field button').forEach(el => el.disabled = true); return; }
@@ -522,7 +530,12 @@
   }
 
   function gradeLocally(w, answers, keys) {
-    const norm = (t) => String(t ?? '').replace(/[​‌‍﻿]/g, '').replace(/\s+/g, ' ').toLowerCase().trim().replace(/^[ .។,]+|[ .។,]+$/g, '');
+    const norm = (t) => {
+      let x = String(t ?? '').replace(/[​‌‍﻿]/g, '').replace(/\s+/g, ' ').toLowerCase().replace(/[០-៩]/g, d => '០១២៣៤៥៦៧៨៩'.indexOf(d));
+      if (/^[0-9][0-9 ]*(\.[0-9]+)?$/.test(x.trim())) x = x.replace(/ /g, '');           // 3 000 000 = 3000000
+      if (/^[0-9]{1,3}(,[0-9]{3})+(\.[0-9]+)?$/.test(x.trim())) x = x.replace(/,/g, ''); // 3,000,000
+      return x.trim().replace(/^[ .។,]+|[ .។,]+$/g, '');
+    };
     const results = {}, groups = {}; let score = 0, total = 0;
     for (const f of w.fields || []) {
       if (!isQ(f) || keys[f.id] === undefined) continue;
@@ -607,7 +620,7 @@
       el.classList.add('placed');
       void fieldById;
     }
-    fillAuto(root, student.full_name, sub.submitted_at);
+    fillAuto(root, student.full_name, sub.submitted_at, w.subject);
     const { data: keys } = await app.sb.rpc('worksheet_answers', { p_worksheet: w.id });
     markResults(root, w, sub.answers, sub.results, keys);
     const p = pct(sub);
@@ -1126,7 +1139,7 @@
       app.closeModal(true);
       openPlayer(temp, { mode: 'view' });
       const root2 = app.$('#modalBox');
-      fillAuto(root2, app.state.me.full_name, null);
+      fillAuto(root2, app.state.me.full_name, null, temp.subject);
       root2.querySelectorAll('.ws-field input, .ws-field select, .ws-field button').forEach(el => el.disabled = false);
       const st = { answers: {}, placed: {}, done: false, selectedDrag: null };
       root2.querySelectorAll('.ws-field[data-type=text] input').forEach(inp => inp.addEventListener('input', () => { st.answers[inp.dataset.fid] = inp.value; }));
