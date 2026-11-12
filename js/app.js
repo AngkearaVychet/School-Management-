@@ -64,6 +64,9 @@
     if (state.me.role === 'teacher' && (state.me.teach_grades || []).length) return state.me.teach_grades;
     return null;
   };
+  // a classroom teacher only sees the grades they teach (lessons, worksheets)
+  const viewGrades = () => (state.me && state.me.role === 'teacher' && (state.me.teach_grades || []).length) ? state.me.teach_grades : null;
+  const fixGradeFilter = (f) => { const vg = viewGrades(); if (vg && !vg.includes(f.grade)) f.grade = vg.length === 1 ? vg[0] : ''; };
   const canManageGrade = (g) => state.me.role === 'admin' || (state.me.role === 'head' && myGrades().includes(g));
   function linkify(text) {
     return esc(text).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" class="text-blue-700 underline break-all">$1</a>').replace(/\n/g, '<br>');
@@ -293,6 +296,8 @@
     const { data, error } = await sb.from('lessons').select('*').order('created_at', { ascending: false });
     if (error) throw error;
     state.lessons = data || [];
+    const vg = viewGrades();
+    if (vg) state.lessons = state.lessons.filter(l => vg.includes(l.grade));
     if (state.me.role === 'student') {
       const { data: recs } = await sb.from('lesson_records').select('*').eq('student_id', state.me.id);
       state.myRecords = Object.fromEntries((recs || []).map(r => [r.lesson_id, r]));
@@ -305,6 +310,7 @@
     try { await loadLessons(); } catch (e) { v.innerHTML = emptyBox('fa-wifi', 'មិនអាចទាញយកមេរៀនបាន', esc(errMsg(e))); return; }
     const me = state.me;
     if (me.role === 'parent' && !state.filter.grade && state.children[0]) state.filter.grade = state.children[0].grade || '';
+    fixGradeFilter(state.filter);
 
     const gradeLocked = me.role === 'student';
     v.innerHTML = `
@@ -321,7 +327,7 @@
           <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
           <input id="fQ" type="search" value="${esc(state.filter.q)}" placeholder="ស្វែងរកមេរៀន..." class="field pl-9">
         </div>
-        ${gradeLocked ? '' : `<select id="fGrade" class="field sm:w-56">${gradeOptions(state.filter.grade, { includeAll: true })}</select>`}
+        ${gradeLocked ? '' : `<select id="fGrade" class="field sm:w-56">${gradeOptions(state.filter.grade, viewGrades() ? { includeAll: viewGrades().length > 1, allLabel: 'គ្រប់ថ្នាក់របស់ខ្ញុំ', only: viewGrades() } : { includeAll: true })}</select>`}
       </div>
       <div id="subjectChips" class="flex gap-2 overflow-x-auto no-scrollbar pb-1 mb-5"></div>
       <div id="lessonGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>`;
@@ -1014,7 +1020,7 @@
 
   // shared helpers for js/worksheets.js
   window.App = { sb, CFG, state, $, esc, toast, errMsg, openModal, closeModal, modalHeader, gradeOptions, subjectOf, SUBJECT_COLORS,
-    isStaff, myGrades, canManageGrade, loading, emptyBox, statCard, fmtDate, fmtDateTime, fmtDuration, loadLessons, linkify };
+    isStaff, myGrades, viewGrades, fixGradeFilter, canManageGrade, loading, emptyBox, statCard, fmtDate, fmtDateTime, fmtDuration, loadLessons, linkify };
 
   boot().catch((e) => { console.error(e); showLogin(); });
 })();
