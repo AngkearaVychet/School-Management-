@@ -11,7 +11,8 @@
   });
 
   const ROLES = {
-    admin:   { label: 'Admin',     icon: 'fa-user-shield',      bg: 'bg-red-600' },
+    admin:   { label: 'Admin ប្រព័ន្ធ', icon: 'fa-user-shield',  bg: 'bg-red-600' },
+    manager: { label: 'អ្នកគ្រប់គ្រង', icon: 'fa-user-gear',     bg: 'bg-rose-500' },
     head:    { label: 'ប្រធានផ្នែក', icon: 'fa-user-tie',         bg: 'bg-purple-700' },
     teacher: { label: 'គ្រូបង្រៀន', icon: 'fa-chalkboard-user',  bg: 'bg-blue-900' },
     student: { label: 'សិស្ស',      icon: 'fa-user-graduate',    bg: 'bg-emerald-600' },
@@ -55,8 +56,14 @@
     return html;
   }
   // a department head is stored as a teacher with managed_grades
-  const effRole = (p) => (p.role === 'teacher' && (p.managed_grades || []).length) ? 'head' : p.role;
-  const myGrades = () => (state.me && state.me.role === 'head') ? (state.me.managed_grades || []) : null;
+  // a manager (អ្នកគ្រប់គ្រង) is stored as an admin that is not the system owner
+  const effRole = (p) => (p.role === 'teacher' && (p.managed_grades || []).length) ? 'head' : (p.role === 'admin' && !p.is_owner) ? 'manager' : p.role;
+  const myGrades = () => {
+    if (!state.me) return null;
+    if (state.me.role === 'head') return state.me.managed_grades || [];
+    if (state.me.role === 'teacher' && (state.me.teach_grades || []).length) return state.me.teach_grades;
+    return null;
+  };
   const canManageGrade = (g) => state.me.role === 'admin' || (state.me.role === 'head' && myGrades().includes(g));
   function linkify(text) {
     return esc(text).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener" class="text-blue-700 underline break-all">$1</a>').replace(/\n/g, '<br>');
@@ -190,11 +197,13 @@
       return;
     }
     me.role = effRole(me);
+    me.isManager = me.role === 'manager';
+    if (me.isManager) me.role = 'admin'; // a manager has every admin right except managing admins
     state.me = me;
-    const r = ROLES[me.role];
+    const r = ROLES[me.isManager ? 'manager' : me.role];
     $('#userAvatar').className = `w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm ${r.bg}`;
     $('#userAvatar').innerHTML = `<i class="fa-solid ${r.icon}"></i>`;
-    const roleText = r.label + (me.role === 'student' && me.grade ? ' • ' + me.grade : '') + (me.role === 'head' ? ' • ' + me.managed_grades.length + ' ថ្នាក់' : '');
+    const roleText = r.label + (me.role === 'student' && me.grade ? ' • ' + me.grade : '') + (me.role === 'head' ? ' • ' + me.managed_grades.length + ' ថ្នាក់' : '') + (me.role === 'teacher' && (me.teach_grades || []).length ? ' • ' + me.teach_grades.join(', ') : '');
     $('#userName').textContent = me.full_name; $('#userNameMobile').textContent = me.full_name;
     $('#userRole').textContent = roleText; $('#userRoleMobile').textContent = roleText;
 
@@ -684,8 +693,9 @@
         return;
       }
       // staff: summary per student
-      const { data: students, error } = await sb.from('profiles').select('*').eq('role', 'student').order('full_name');
+      let { data: students, error } = await sb.from('profiles').select('*').eq('role', 'student').order('full_name');
       if (error) throw error;
+      if (me.role === 'teacher' && myGrades()) students = (students || []).filter(s => myGrades().includes(s.grade));
       // (lessons were loaded above)
       const [recs, allSubs] = await Promise.all([fetchRecordsFor((students || []).map(s => s.id)), window.Worksheets.fetchSubmissions((students || []).map(s => s.id))]);
       const gradeSel = state.recGrade || '';
@@ -694,7 +704,7 @@
           <div><h1 class="text-xl sm:text-2xl font-bold text-blue-950">កំណត់ត្រាសិស្ស</h1>
             <p class="text-sm text-slate-500">តាមដានការចូលរៀន រយៈពេល និងមេរៀនដែលរៀនរួច</p></div>
           <div class="flex gap-2">
-            <select id="recGrade" class="field sm:w-52">${gradeOptions(gradeSel, { includeAll: true, allLabel: myGrades() ? 'គ្រប់ថ្នាក់ក្នុងផ្នែក' : 'គ្រប់ថ្នាក់', only: myGrades() })}</select>
+            <select id="recGrade" class="field sm:w-52">${gradeOptions(gradeSel, { includeAll: true, allLabel: myGrades() ? (me.role === 'teacher' ? 'គ្រប់ថ្នាក់របស់ខ្ញុំ' : 'គ្រប់ថ្នាក់ក្នុងផ្នែក') : 'គ្រប់ថ្នាក់', only: myGrades() })}</select>
             <button type="button" id="csvBtn" class="btn-ghost whitespace-nowrap" title="ទាញយក Excel/CSV"><i class="fa-solid fa-file-excel text-emerald-700"></i> CSV</button>
           </div>
         </div>
@@ -758,7 +768,8 @@
   // =========================================================
   function canManage(p) {
     if (p.id === state.me.id) return false;
-    if (state.me.role === 'admin') return true;
+    if (p.is_owner) return false;
+    if (state.me.role === 'admin') return ['admin', 'manager'].includes(p.role) ? !!state.me.is_owner : true;
     if (state.me.role === 'head') {
       if (p.role === 'teacher') return true;
       if (p.role === 'student') return myGrades().includes(p.grade);
@@ -777,7 +788,7 @@
     if (error) { v.innerHTML = emptyBox('fa-wifi', 'មិនអាចទាញយកទិន្នន័យបាន', esc(errMsg(error))); return; }
     state.people = (people || []).map(p => ({ ...p, role: effRole(p) })); state.links = links || [];
     const roleFilter = state.accRole || '';
-    const roleChoices = state.me.role === 'admin' ? ['student', 'parent', 'teacher', 'head', 'admin'] : state.me.role === 'head' ? ['student', 'parent', 'teacher'] : ['student', 'parent'];
+    const roleChoices = state.me.role === 'admin' ? ['student', 'parent', 'teacher', 'head', ...(state.me.is_owner ? ['manager'] : [])] : state.me.role === 'head' ? ['student', 'parent', 'teacher'] : ['student', 'parent'];
 
     v.innerHTML = `
       <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-5">
@@ -802,6 +813,8 @@
             <p class="font-semibold text-slate-800 truncate">${esc(p.full_name)} ${p.id === state.me.id ? '<span class="text-xs text-slate-400">(ខ្ញុំ)</span>' : ''}</p>
             <p class="text-xs text-slate-500 truncate">@${esc(p.username)} • ${r.label}${p.grade ? ' • ' + esc(p.grade) : ''}${p.phone ? ' • ' + esc(p.phone) : ''}</p>
             ${p.role === 'head' ? `<p class="text-xs mt-0.5 text-purple-700"><i class="fa-solid fa-layer-group"></i> ${esc((p.managed_grades || []).join(', '))}</p>` : ''}
+            ${p.role === 'teacher' ? `<p class="text-xs mt-0.5 ${(p.teach_grades || []).length ? 'text-blue-800' : 'text-amber-600'}"><i class="fa-solid fa-chalkboard"></i> ${(p.teach_grades || []).length ? esc(p.teach_grades.join(', ')) : 'មិនទាន់ចាត់ថ្នាក់'}</p>` : ''}
+            ${p.role === 'manager' ? `<p class="text-xs mt-0.5 text-rose-600"><i class="fa-solid fa-shield-halved"></i> សិទ្ធិគ្រប់យ៉ាង (ក្រោម Admin ប្រព័ន្ធ)</p>` : ''}
             ${p.role === 'parent' ? `<p class="text-xs mt-0.5 ${kids.length ? 'text-emerald-700' : 'text-amber-600'}"><i class="fa-solid fa-child"></i> ${kids.length ? esc(kids.join(', ')) : 'មិនទាន់ភ្ជាប់កូន'}</p>` : ''}
           </div>
           ${canManage(p) ? `<div class="flex gap-1 flex-shrink-0">
@@ -832,6 +845,14 @@
     });
   }
 
+  function gradeChecks(name, checked, only, accent) {
+    return CFG.GRADES.map(g => {
+      const items = only ? g.items.filter(i => only.includes(i)) : g.items;
+      if (!items.length) return '';
+      return `<div><label class="flex items-center gap-2 text-xs font-bold text-slate-600 mb-1"><input type="checkbox" data-group="${esc(name + ':' + g.group)}" class="w-4 h-4 ${accent}"> ${esc(g.group)}</label>
+        <div class="flex flex-wrap gap-x-4 gap-y-1 pl-6">${items.map(i => `<label class="flex items-center gap-1.5 text-sm"><input type="checkbox" name="${name}" value="${esc(i)}" data-in="${esc(name + ':' + g.group)}" ${(checked || []).includes(i) ? 'checked' : ''} class="w-4 h-4 ${accent}"> ${esc(i)}</label>`).join('')}</div></div>`;
+    }).join('');
+  }
   function openUserForm(roleChoices, p = null) {
     const role = p ? p.role : (state.accRole && roleChoices.includes(state.accRole) ? state.accRole : 'student');
     openModal(modalHeader(p ? 'កែព័ត៌មានគណនី' : 'បង្កើតគណនីថ្មី', 'fa-user-plus') + `
@@ -856,10 +877,11 @@
         </div>
         <div id="managedWrap" class="hidden">
           <span class="label">ថ្នាក់ដែលប្រធានផ្នែកគ្រប់គ្រង * <span class="font-normal text-slate-400">(ធីកច្រើនបាន)</span></span>
-          <div class="mt-1 space-y-2 max-h-64 overflow-y-auto border border-slate-200 rounded-xl p-3">${CFG.GRADES.map(g => `
-            <div><label class="flex items-center gap-2 text-xs font-bold text-slate-600 mb-1"><input type="checkbox" data-group="${esc(g.group)}" class="w-4 h-4 accent-purple-700"> ${esc(g.group)}</label>
-              <div class="flex flex-wrap gap-x-4 gap-y-1 pl-6">${g.items.map(i => `<label class="flex items-center gap-1.5 text-sm"><input type="checkbox" name="managed" value="${esc(i)}" data-in="${esc(g.group)}" ${p && (p.managed_grades || []).includes(i) ? 'checked' : ''} class="w-4 h-4 accent-purple-700"> ${esc(i)}</label>`).join('')}</div></div>`).join('')}
-          </div>
+          <div class="mt-1 space-y-2 max-h-64 overflow-y-auto border border-slate-200 rounded-xl p-3">${gradeChecks('managed', p && p.managed_grades, null, 'accent-purple-700')}</div>
+        </div>
+        <div id="teachWrap" class="hidden">
+          <span class="label">ថ្នាក់ដែលគ្រូបង្រៀន <span class="font-normal text-slate-400">(ធីកច្រើនបាន — គ្រូនឹងឃើញតែថ្នាក់ទាំងនេះពេលដាក់មេរៀន និងមើលកំណត់ត្រា)</span></span>
+          <div class="mt-1 space-y-2 max-h-64 overflow-y-auto border border-slate-200 rounded-xl p-3">${gradeChecks('teach', p && p.teach_grades, myGrades(), 'accent-blue-800')}</div>
         </div>
         <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
           <button type="button" data-close class="btn-ghost">បោះបង់</button>
@@ -871,6 +893,7 @@
       const r = p ? p.role : (f.querySelector('[name=role]:checked') || {}).value;
       $('#gradeWrap').classList.toggle('hidden', r !== 'student');
       $('#managedWrap').classList.toggle('hidden', !(r === 'head' && state.me.role === 'admin'));
+      $('#teachWrap').classList.toggle('hidden', !(r === 'teacher' && ['admin', 'head'].includes(state.me.role)));
     };
     f.addEventListener('change', (e) => {
       if (e.target.dataset.group) f.querySelectorAll(`[data-in="${CSS.escape(e.target.dataset.group)}"]`).forEach(c => { c.checked = e.target.checked; });
@@ -885,9 +908,10 @@
       if (r === 'student' && !grade) { btn.disabled = false; return toast('សូមជ្រើសថ្នាក់សម្រាប់សិស្ស', 'error'); }
       const managed = r === 'head' ? [...f.querySelectorAll('[name=managed]:checked')].map(c => c.value) : null;
       if (r === 'head' && state.me.role === 'admin' && !managed.length) { btn.disabled = false; return toast('សូមធីកថ្នាក់យ៉ាងតិចមួយ ឱ្យប្រធានផ្នែក', 'error'); }
+      const teach = r === 'teacher' && ['admin', 'head'].includes(state.me.role) ? [...f.querySelectorAll('[name=teach]:checked')].map(c => c.value) : null;
       let error;
-      if (p) ({ error } = await sb.rpc('update_account', { p_user: p.id, p_full_name: f.full_name.value, p_grade: grade, p_phone: f.phone.value, p_managed: state.me.role === 'admin' ? managed : null }));
-      else ({ error } = await sb.rpc('create_account', { p_username: f.username.value.trim().toLowerCase(), p_password: f.password.value, p_full_name: f.full_name.value, p_role: r, p_grade: grade, p_phone: f.phone.value, p_managed: managed }));
+      if (p) ({ error } = await sb.rpc('update_account', { p_user: p.id, p_full_name: f.full_name.value, p_grade: grade, p_phone: f.phone.value, p_managed: state.me.role === 'admin' ? managed : null, p_teach: teach }));
+      else ({ error } = await sb.rpc('create_account', { p_username: f.username.value.trim().toLowerCase(), p_password: f.password.value, p_full_name: f.full_name.value, p_role: r, p_grade: grade, p_phone: f.phone.value, p_managed: managed, p_teach: teach }));
       btn.disabled = false;
       if (error) return toast(errMsg(error), 'error');
       if (p) { closeModal(); toast('បានរក្សាទុក'); renderAccountsView(); return; }
