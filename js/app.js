@@ -23,6 +23,24 @@
     rose: 'bg-rose-50 text-rose-800', amber: 'bg-amber-50 text-amber-800', purple: 'bg-purple-50 text-purple-800',
     slate: 'bg-slate-100 text-slate-700'
   };
+  // card header gradients per subject colour
+  const SUBJECT_GRAD = {
+    blue: 'from-blue-600 via-blue-700 to-blue-900', indigo: 'from-indigo-500 via-indigo-600 to-violet-800', emerald: 'from-emerald-500 via-emerald-600 to-teal-800',
+    rose: 'from-rose-500 via-rose-600 to-red-800', amber: 'from-amber-400 via-orange-500 to-orange-700', purple: 'from-purple-500 via-fuchsia-600 to-purple-800',
+    slate: 'from-slate-500 via-slate-600 to-slate-800'
+  };
+  const SUBJECT_DOT = { blue: 'bg-blue-600', indigo: 'bg-indigo-600', emerald: 'bg-emerald-600', rose: 'bg-rose-600', amber: 'bg-orange-500', purple: 'bg-purple-600', slate: 'bg-slate-500' };
+  const KD = '០១២៣៤៥៦៧៨៩';
+  const toArabic = (t) => String(t).replace(/[០-៩]/g, d => KD.indexOf(d));
+  // «មេរៀនទី១០ ៖ សត្វ…» → { no: 10, label: 'មេរៀនទី១០', rest: 'សត្វ…' }
+  function splitTitle(t) {
+    const m = /^\s*(មេរៀនទី\s*([០-៩0-9]+))\s*[៖:]\s*(.+)$/.exec(t || '');
+    return m ? { no: +toArabic(m[2]), label: m[1], rest: m[3] } : { no: null, label: '', rest: t || '' };
+  }
+  const KM_MONTHS = ['មករា', 'កុម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា', 'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'];
+  const KM_DAYS = ['អាទិត្យ', 'ច័ន្ទ', 'អង្គារ', 'ពុធ', 'ព្រហស្បតិ៍', 'សុក្រ', 'សៅរ៍'];
+  const kmNum = (n) => String(n).replace(/[0-9]/g, d => KD[d]);
+  const todayKm = () => { const d = new Date(); return `ថ្ងៃ${KM_DAYS[d.getDay()]} ទី${kmNum(d.getDate())} ខែ${KM_MONTHS[d.getMonth()]} ឆ្នាំ${kmNum(d.getFullYear())}`; };
   const ALL_GRADES = CFG.GRADES.flatMap(g => g.items);
 
   const state = {
@@ -321,51 +339,85 @@
     fixGradeFilter(state.filter);
 
     const gradeLocked = me.role === 'student';
+    const hello = 'សួស្តី ' + esc(me.full_name) + ' 👋';
+    const sub = me.role === 'student' ? 'តោះ! ចាប់ផ្តើមរៀនមេរៀនថ្ងៃនេះ' : me.role === 'parent' ? 'តាមដានមេរៀនរបស់កូនៗ' : 'គ្រប់គ្រងមេរៀន និងកិច្ចការរបស់សាលា';
     v.innerHTML = `
-      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-5">
-        <div>
-          <h1 class="text-xl sm:text-2xl font-bold text-blue-950">${me.role === 'student' ? 'សួស្តី ' + esc(me.full_name) + ' 👋' : 'មេរៀនទាំងអស់'}</h1>
-          <p class="text-sm text-slate-500 mt-0.5">${me.role === 'student' ? 'មេរៀនសម្រាប់ ' + esc(me.grade || 'ថ្នាក់របស់អ្នក') : 'ជ្រើសរើសថ្នាក់ និងមុខវិជ្ជា ដើម្បីមើលមេរៀន'}</p>
+      <section class="hero mb-5">
+        <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+          <div class="min-w-0">
+            <p class="text-blue-200 text-xs sm:text-sm"><i class="fa-regular fa-calendar mr-1.5"></i>${todayKm()}</p>
+            <h1 class="text-2xl sm:text-3xl font-bold mt-1.5 leading-snug">${hello}</h1>
+            <p class="text-blue-100/90 text-sm mt-1">${sub}${me.role === 'student' && me.grade ? ' • ' + esc(me.grade) : ''}</p>
+            ${isStaff() ? `<button type="button" id="newLessonBtn" class="hero-btn mt-4"><i class="fa-solid fa-plus"></i> បង្កើតមេរៀនថ្មី</button>` : ''}
+          </div>
+          <div id="heroStats" class="grid grid-cols-3 gap-2.5 sm:gap-3 lg:w-[460px] flex-shrink-0"></div>
         </div>
-        ${isStaff() ? `<button type="button" id="newLessonBtn" class="btn-red self-start sm:self-auto"><i class="fa-solid fa-plus"></i> បង្កើតមេរៀនថ្មី</button>` : ''}
-      </div>
+      </section>
 
-      <div class="bg-white rounded-2xl border border-slate-200 p-3 mb-4 flex flex-col sm:flex-row gap-2">
+      <div class="bg-white rounded-2xl border border-slate-200 p-2.5 mb-3 flex flex-col sm:flex-row gap-2 shadow-sm">
         <div class="relative flex-1">
-          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-          <input id="fQ" type="search" value="${esc(state.filter.q)}" placeholder="ស្វែងរកមេរៀន..." class="field pl-9">
+          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+          <input id="fQ" type="search" value="${esc(state.filter.q)}" placeholder="ស្វែងរកមេរៀន..." class="field pl-10 border-transparent bg-slate-50 focus:bg-white">
         </div>
-        ${gradeLocked ? '' : `<select id="fGrade" class="field sm:w-56">${gradeOptions(state.filter.grade, viewGrades() ? { includeAll: viewGrades().length > 1, allLabel: viewAllLabel(), only: viewGrades() } : { includeAll: true })}</select>`}
+        ${gradeLocked ? '' : `<div class="relative sm:w-56"><i class="fa-solid fa-layer-group absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none"></i><select id="fGrade" class="field pl-10 border-transparent bg-slate-50">${gradeOptions(state.filter.grade, viewGrades() ? { includeAll: viewGrades().length > 1, allLabel: viewAllLabel(), only: viewGrades() } : { includeAll: true })}</select></div>`}
       </div>
       <div id="subjectChips" class="flex gap-2 overflow-x-auto no-scrollbar pb-1 mb-5"></div>
-      <div id="lessonGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>`;
+      <div id="lessonGrid"></div>`;
 
     $('#fQ').addEventListener('input', (e) => { state.filter.q = e.target.value; drawLessonGrid(); });
-    if (!gradeLocked) $('#fGrade').addEventListener('change', (e) => { state.filter.grade = e.target.value; drawLessonGrid(); });
+    if (!gradeLocked) $('#fGrade').addEventListener('change', (e) => { state.filter.grade = e.target.value; drawSubjectChips(); drawLessonGrid(); });
     if ($('#newLessonBtn')) $('#newLessonBtn').addEventListener('click', () => openLessonForm());
     drawSubjectChips();
     drawLessonGrid();
+    // worksheet counts (for the banner and the cards) — loaded after first paint
+    sb.from('worksheets').select('id,lesson_id,grade').then(({ data }) => {
+      const vg = viewGrades();
+      state.wsList = (data || []).filter(w => !vg || vg.includes(w.grade));
+      state.wsByLesson = {};
+      for (const w of state.wsList) if (w.lesson_id) state.wsByLesson[w.lesson_id] = (state.wsByLesson[w.lesson_id] || 0) + 1;
+      if ($('#lessonGrid')) { drawHeroStats(); drawLessonGrid(); }
+    });
   }
 
   function drawSubjectChips() {
-    const chips = [{ id: '', name: 'ទាំងអស់', icon: 'fa-border-all' }, ...CFG.SUBJECTS];
+    const base = lessonsForGrade();
+    const cnt = (id) => id ? base.filter(l => l.subject === id).length : base.length;
+    const chips = [{ id: '', name: 'ទាំងអស់', icon: 'fa-border-all' }, ...CFG.SUBJECTS].filter(s => !s.id || cnt(s.id) || state.filter.subject === s.id);
     $('#subjectChips').innerHTML = chips.map(s => `
       <button type="button" data-subject="${s.id}" class="chip ${state.filter.subject === s.id ? 'chip-active' : ''}">
-        <i class="fa-solid ${s.icon}"></i> ${esc(s.name)}
+        <i class="fa-solid ${s.icon}"></i> ${esc(s.name)} <span class="chip-n">${kmNum(cnt(s.id))}</span>
       </button>`).join('');
+    drawHeroStats();
     $('#subjectChips').onclick = (e) => {
       const b = e.target.closest('[data-subject]'); if (!b) return;
       state.filter.subject = b.dataset.subject; drawSubjectChips(); drawLessonGrid();
     };
   }
 
+  const lessonsForGrade = () => state.lessons.filter(l => !state.filter.grade || l.grade === state.filter.grade);
   function filteredLessons() {
-    const { grade, subject, q } = state.filter;
+    const { subject, q } = state.filter;
     const qq = q.trim().toLowerCase();
-    return state.lessons.filter(l =>
-      (!grade || l.grade === grade) &&
+    const order = Object.fromEntries(CFG.SUBJECTS.map((x, i) => [x.id, i]));
+    const gi = (g) => { const i = ALL_GRADES.indexOf(g); return i < 0 ? 999 : i; };
+    return lessonsForGrade().filter(l =>
       (!subject || l.subject === subject) &&
-      (!qq || (l.title + ' ' + l.description + ' ' + l.teacher_name).toLowerCase().includes(qq)));
+      (!qq || (l.title + ' ' + l.description + ' ' + l.teacher_name).toLowerCase().includes(qq)))
+      .sort((a, b) => (order[a.subject] ?? 99) - (order[b.subject] ?? 99) || gi(a.grade) - gi(b.grade) ||
+        (splitTitle(a.title).no ?? 1e9) - (splitTitle(b.title).no ?? 1e9) || String(b.created_at).localeCompare(String(a.created_at)));
+  }
+  function drawHeroStats() {
+    const box = $('#heroStats'); if (!box) return;
+    const base = lessonsForGrade(), me = state.me;
+    const tile = (icon, n, label) => `<div class="hero-stat"><i class="fa-solid ${icon}"></i><b>${kmNum(n)}</b><span>${label}</span></div>`;
+    const ws = state.wsList ? state.wsList.filter(w => !state.filter.grade || w.grade === state.filter.grade).length : '…';
+    if (me.role === 'student') {
+      const done = base.filter(l => state.myRecords[l.id] && state.myRecords[l.id].completed_at).length;
+      box.innerHTML = tile('fa-book-open', base.length, 'មេរៀន') + tile('fa-circle-check', done, 'រៀនរួច') + tile('fa-pen-to-square', ws, 'កិច្ចការ');
+    } else {
+      const subj = new Set(base.map(l => l.subject)).size;
+      box.innerHTML = tile('fa-book-open', base.length, 'មេរៀន') + tile('fa-pen-to-square', ws, 'កិច្ចការ') + tile('fa-shapes', subj, 'មុខវិជ្ជា');
+    }
   }
 
   function canEdit(l) { return l.created_by === state.me.id || canManageGrade(l.grade); }
@@ -374,42 +426,63 @@
     const list = filteredLessons();
     const grid = $('#lessonGrid');
     if (!list.length) {
-      grid.innerHTML = `<div class="col-span-full">${emptyBox('fa-folder-open', 'មិនទាន់មានមេរៀន', isStaff() ? 'ចុច «បង្កើតមេរៀនថ្មី» ដើម្បីដាក់មេរៀនដំបូង' : 'គ្រូនឹងដាក់មេរៀនឆាប់ៗនេះ')}</div>`;
+      grid.innerHTML = emptyBox('fa-folder-open', 'មិនទាន់មានមេរៀន', isStaff() ? 'ចុច «បង្កើតមេរៀនថ្មី» ដើម្បីដាក់មេរៀនដំបូង' : 'គ្រូនឹងដាក់មេរៀនឆាប់ៗនេះ');
       return;
     }
-    grid.innerHTML = list.map(l => {
-      const s = subjectOf(l.subject);
+    const card = (l) => {
+      const s = subjectOf(l.subject), t = splitTitle(l.title);
       const rec = state.myRecords[l.id];
       const files = (l.attachments || []).length;
       const ytId = youtubeId(l.youtube_url);
+      const nWs = (state.wsByLesson || {})[l.id] || 0;
+      const who = (l.teacher_name || '—').trim();
       return `
       <article class="lesson-card group" data-open="${l.id}" tabindex="0" role="button" aria-label="${esc(l.title)}">
-        <div class="relative aspect-video bg-gradient-to-br from-blue-900 to-blue-950 overflow-hidden">
-          ${ytId ? `<img src="https://i.ytimg.com/vi/${ytId}/mqdefault.jpg" alt="" loading="lazy" class="w-full h-full object-cover opacity-90 group-hover:scale-105 transition duration-300">
-                    <span class="absolute inset-0 flex items-center justify-center"><span class="w-12 h-12 rounded-full bg-red-600/95 text-white flex items-center justify-center shadow-lg"><i class="fa-solid fa-play ml-0.5"></i></span></span>`
-                 : `<span class="absolute inset-0 flex items-center justify-center text-white/80 text-4xl"><i class="fa-solid ${s.icon}"></i></span>`}
-          ${rec && rec.completed_at ? `<span class="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[11px] font-bold"><i class="fa-solid fa-check"></i> រៀនរួច</span>` : ''}
+        <div class="relative h-28 bg-gradient-to-br ${SUBJECT_GRAD[s.color]} overflow-hidden">
+          ${ytId ? `<img src="https://i.ytimg.com/vi/${ytId}/mqdefault.jpg" alt="" loading="lazy" class="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-luminosity group-hover:scale-105 transition duration-300">` : ''}
+          <span class="card-dots"></span>
+          <i class="fa-solid ${s.icon} absolute right-3 -bottom-3 text-[72px] text-white/20 group-hover:rotate-[-8deg] transition duration-300"></i>
+          <div class="absolute left-4 top-3.5 right-4 flex items-start justify-between gap-2">
+            <span class="card-no">${t.label ? esc(t.label) : '<i class="fa-solid ' + s.icon + '"></i>'}</span>
+            ${rec && rec.completed_at ? '<span class="card-done"><i class="fa-solid fa-check"></i> រៀនរួច</span>' : ''}
+          </div>
+          ${ytId ? '<span class="absolute left-4 bottom-3 card-yt"><i class="fa-solid fa-play"></i> វីដេអូ</span>' : ''}
         </div>
-        <div class="p-4 flex flex-col gap-2 flex-1">
-          <div class="flex items-center gap-1.5 flex-wrap">
-            <span class="badge ${SUBJECT_COLORS[s.color]}"><i class="fa-solid ${s.icon}"></i> ${esc(s.name)}</span>
+        <div class="p-4 flex flex-col gap-2.5 flex-1">
+          <h3 class="font-bold text-slate-900 text-[15px] leading-snug line-clamp-2 min-h-[2.6em]">${esc(t.rest)}</h3>
+          <div class="flex items-center gap-1.5 flex-wrap text-[11px]">
+            <span class="badge ${SUBJECT_COLORS[s.color]}">${esc(s.name)}</span>
             <span class="badge bg-slate-100 text-slate-600">${esc(l.grade)}</span>
+            ${files ? `<span class="badge bg-amber-50 text-amber-700"><i class="fa-solid fa-paperclip"></i> ${files}</span>` : ''}
+            ${nWs ? `<span class="badge bg-emerald-50 text-emerald-700"><i class="fa-solid fa-pen-to-square"></i> កិច្ចការ ${nWs}</span>` : ''}
           </div>
-          <h3 class="font-bold text-slate-900 leading-snug line-clamp-2">${esc(l.title)}</h3>
-          <div class="mt-auto pt-2 flex items-center justify-between text-xs text-slate-500">
-            <span class="truncate"><i class="fa-solid fa-user-pen mr-1"></i>${esc(l.teacher_name || '—')}</span>
-            <span class="flex items-center gap-2.5 flex-shrink-0">
-              ${ytId ? '<i class="fa-brands fa-youtube text-red-600" title="មានវីដេអូ"></i>' : ''}
-              ${files ? `<span title="ឯកសារ"><i class="fa-solid fa-paperclip"></i> ${files}</span>` : ''}
-            </span>
+          <div class="mt-auto pt-3 flex items-center gap-2 border-t border-slate-100">
+            <span class="w-7 h-7 rounded-full ${SUBJECT_DOT[s.color]} text-white text-[11px] font-bold flex items-center justify-center flex-shrink-0">${esc(who.replace(/^(អ្នកគ្រូ|លោកគ្រូ|អ្នក)\s*/, '').charAt(0) || '?')}</span>
+            <span class="text-xs text-slate-500 truncate flex-1">${esc(who)}</span>
+            ${canEdit(l) ? `<span class="flex gap-1 flex-shrink-0">
+              <button type="button" data-edit="${l.id}" class="icon-btn" title="កែ" aria-label="កែ"><i class="fa-solid fa-pen"></i></button>
+              <button type="button" data-del="${l.id}" class="icon-btn hover:!bg-red-50 hover:!text-red-600" title="លុប" aria-label="លុប"><i class="fa-solid fa-trash"></i></button>
+            </span>` : '<i class="fa-solid fa-arrow-right text-slate-300 group-hover:text-blue-700 group-hover:translate-x-0.5 transition"></i>'}
           </div>
-          ${canEdit(l) ? `<div class="flex gap-2 pt-2 border-t border-slate-100">
-              <button type="button" data-edit="${l.id}" class="btn-ghost-sm"><i class="fa-solid fa-pen"></i> កែ</button>
-              <button type="button" data-del="${l.id}" class="btn-ghost-sm text-red-600"><i class="fa-solid fa-trash"></i> លុប</button>
-            </div>` : ''}
         </div>
       </article>`;
-    }).join('');
+    };
+    const gridCls = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
+    if (state.filter.subject) { grid.innerHTML = `<div class="${gridCls}">${list.map(card).join('')}</div>`; }
+    else {
+      const groups = [];
+      for (const l of list) { const g = groups.find(x => x.id === l.subject); if (g) g.items.push(l); else groups.push({ id: l.subject, items: [l] }); }
+      grid.innerHTML = groups.map(g => { const s = subjectOf(g.id); return `
+        <section class="mb-7">
+          <div class="flex items-center gap-2.5 mb-3">
+            <span class="w-8 h-8 rounded-lg ${SUBJECT_DOT[s.color]} text-white flex items-center justify-center text-sm"><i class="fa-solid ${s.icon}"></i></span>
+            <h2 class="font-bold text-slate-800 text-lg">${esc(s.name)}</h2>
+            <span class="text-xs text-slate-500 bg-white border border-slate-200 rounded-full px-2.5 py-0.5">${kmNum(g.items.length)} មេរៀន</span>
+            <span class="flex-1 h-px bg-slate-200 ml-1"></span>
+          </div>
+          <div class="${gridCls}">${g.items.map(card).join('')}</div>
+        </section>`; }).join('');
+    }
 
     grid.onclick = (e) => {
       const ed = e.target.closest('[data-edit]'); if (ed) { e.stopPropagation(); return openLessonForm(state.lessons.find(x => x.id === ed.dataset.edit)); }

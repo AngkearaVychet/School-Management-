@@ -21,7 +21,22 @@
   .tab-link { @apply inline-flex items-center gap-2 px-3 sm:px-4 py-3 text-sm font-semibold text-slate-500 border-b-2 border-transparent whitespace-nowrap hover:text-blue-900; }
   .tab-link.active { @apply text-blue-900 border-red-600; }
   .menu-item { @apply w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-2.5; }
-  .lesson-card { @apply bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition focus:outline-none focus:ring-2 focus:ring-blue-900/40; }
+  .lesson-card { @apply bg-white rounded-2xl border border-slate-200/80 overflow-hidden flex flex-col cursor-pointer shadow-sm hover:shadow-xl hover:shadow-blue-900/10 hover:-translate-y-1 transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-900/40; }
+  .card-no { @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/20 backdrop-blur text-white text-xs font-bold ring-1 ring-white/30; }
+  .card-done { @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[11px] font-bold shadow; }
+  .card-yt { @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-red-600 text-white text-[11px] font-bold; }
+  .card-dots { @apply absolute inset-0 opacity-25; background-image: radial-gradient(rgba(255,255,255,.55) 1px, transparent 1.5px); background-size: 14px 14px; }
+  .icon-btn { @apply w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-blue-900 text-xs transition; }
+  .chip-n { @apply ml-0.5 min-w-[22px] h-5 px-1.5 rounded-full bg-slate-100 text-slate-500 text-[11px] font-bold inline-flex items-center justify-center; }
+  .chip-active .chip-n { @apply bg-white/20 text-white; }
+  .hero { @apply relative overflow-hidden rounded-3xl p-5 sm:p-7 text-white shadow-lg shadow-blue-900/20; background: radial-gradient(circle at 85% -20%, rgba(200,16,46,.55), transparent 45%), linear-gradient(135deg, #0d2b6b 0%, #1e3a8a 55%, #1d4ed8 100%); }
+  .hero::before { content: ''; @apply absolute -right-16 -bottom-24 w-72 h-72 rounded-full bg-white/5; }
+  .hero::after { content: ''; @apply absolute right-40 -top-20 w-48 h-48 rounded-full bg-white/5; }
+  .hero-btn { @apply inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-blue-900 font-bold text-sm shadow-md hover:bg-blue-50 transition; }
+  .hero-stat { @apply rounded-2xl bg-white/10 ring-1 ring-white/15 backdrop-blur px-3 py-3 flex flex-col items-start gap-0.5; }
+  .hero-stat i { @apply text-blue-200 text-sm; }
+  .hero-stat b { @apply text-2xl sm:text-3xl font-bold leading-tight; }
+  .hero-stat span { @apply text-[11px] sm:text-xs text-blue-100; }
   .role-opt > span { @apply flex items-center justify-center gap-1.5 px-2 py-2 rounded-xl border-2 border-slate-200 text-sm font-semibold text-slate-600 cursor-pointer; }
 }
 .no-scrollbar { scrollbar-width: none; }
