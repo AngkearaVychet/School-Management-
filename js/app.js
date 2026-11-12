@@ -786,7 +786,22 @@
       sb.from('parent_children').select('*')
     ]);
     if (error) { v.innerHTML = emptyBox('fa-wifi', 'មិនអាចទាញយកទិន្នន័យបាន', esc(errMsg(error))); return; }
-    state.people = (people || []).map(p => ({ ...p, role: effRole(p) })); state.links = links || [];
+    state.links = links || [];
+    let all = (people || []).map(p => ({ ...p, role: effRole(p) }));
+    // each role only sees the accounts it works with
+    const g = myGrades();
+    if (state.me.role !== 'admin') {
+      const okStudent = (st) => !g || g.includes(st.grade);
+      const visKids = new Set(all.filter(x => x.role === 'student' && okStudent(x)).map(x => x.id));
+      all = all.filter(x => {
+        if (x.id === state.me.id) return false;
+        if (x.role === 'student') return okStudent(x);
+        if (x.role === 'parent') { const ks = state.links.filter(l => l.parent_id === x.id); return !ks.length || ks.some(l => visKids.has(l.student_id)); }
+        if (x.role === 'teacher') return state.me.role === 'head' && (!(x.teach_grades || []).length || x.teach_grades.some(t => g.includes(t)));
+        return false;
+      });
+    }
+    state.people = all;
     const roleFilter = state.accRole || '';
     const roleChoices = state.me.role === 'admin' ? ['student', 'parent', 'teacher', 'head', ...(state.me.is_owner ? ['manager'] : [])] : state.me.role === 'head' ? ['student', 'parent', 'teacher'] : ['student', 'parent'];
 
@@ -797,7 +812,7 @@
         <button type="button" id="newUserBtn" class="btn-red self-start sm:self-auto"><i class="fa-solid fa-user-plus"></i> បង្កើតគណនី</button>
       </div>
       <div class="flex gap-2 overflow-x-auto no-scrollbar mb-4" id="roleChips">
-        ${[['', 'ទាំងអស់'], ...Object.entries(ROLES).map(([k, r]) => [k, r.label])].map(([k, label]) =>
+        ${[['', 'ទាំងអស់'], ...Object.entries(ROLES).filter(([k]) => state.me.role === 'admin' || state.people.some(p => p.role === k)).map(([k, r]) => [k, r.label])].map(([k, label]) =>
           `<button type="button" data-role="${k}" class="chip ${roleFilter === k ? 'chip-active' : ''}">${label} <span class="opacity-60">${k ? state.people.filter(p => p.role === k).length : state.people.length}</span></button>`).join('')}
       </div>
       <div id="peopleList" class="bg-white rounded-2xl border border-slate-200 divide-y divide-slate-100"></div>`;
