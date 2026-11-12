@@ -119,16 +119,19 @@
   }
 
   // ---------- Modal ----------
-  let onModalClose = null;
-  function openModal(html, { wide = false, onClose = null } = {}) {
+  let onModalClose = null, beforeModalClose = null;
+  function openModal(html, { wide = false, full = false, onClose = null, beforeClose = null } = {}) {
+    beforeModalClose = beforeClose;
     const box = $('#modalBox');
-    box.className = 'relative bg-white w-full sm:rounded-2xl shadow-2xl max-h-screen sm:max-h-[92vh] overflow-y-auto ' + (wide ? 'sm:max-w-4xl' : 'sm:max-w-lg');
+    box.className = 'relative bg-white w-full sm:rounded-2xl shadow-2xl max-h-screen sm:max-h-[94vh] overflow-y-auto ' + (full ? 'sm:max-w-6xl' : wide ? 'sm:max-w-4xl' : 'sm:max-w-lg');
     box.innerHTML = html;
     $('#modal').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
     onModalClose = onClose;
   }
-  function closeModal() {
+  function closeModal(force = false) {
+    if (!force && beforeModalClose && beforeModalClose() === false) return;
+    beforeModalClose = null;
     if (onModalClose) { const f = onModalClose; onModalClose = null; f(); }
     $('#modal').classList.add('hidden');
     $('#modalBox').innerHTML = '';
@@ -236,9 +239,9 @@
 
   // ---------- Tabs / routing ----------
   function tabsForRole(role) {
-    if (role === 'student') return [['lessons', 'fa-book-open', 'មេរៀនរបស់ខ្ញុំ'], ['records', 'fa-chart-simple', 'កំណត់ត្រារៀន']];
-    if (role === 'parent') return [['records', 'fa-chart-simple', 'ការរៀនរបស់កូន'], ['lessons', 'fa-book-open', 'មេរៀន']];
-    return [['lessons', 'fa-book-open', 'មេរៀន'], ['records', 'fa-chart-simple', 'កំណត់ត្រាសិស្ស'], ['accounts', 'fa-users', role === 'admin' ? 'គណនីអ្នកប្រើ' : 'គណនីសិស្ស']];
+    if (role === 'student') return [['lessons', 'fa-book-open', 'មេរៀនរបស់ខ្ញុំ'], ['worksheets', 'fa-pen-to-square', 'កិច្ចការ'], ['records', 'fa-chart-simple', 'កំណត់ត្រារៀន']];
+    if (role === 'parent') return [['records', 'fa-chart-simple', 'ការរៀនរបស់កូន'], ['lessons', 'fa-book-open', 'មេរៀន'], ['worksheets', 'fa-pen-to-square', 'កិច្ចការ']];
+    return [['lessons', 'fa-book-open', 'មេរៀន'], ['worksheets', 'fa-pen-to-square', 'កិច្ចការ'], ['records', 'fa-chart-simple', 'កំណត់ត្រាសិស្ស'], ['accounts', 'fa-users', role === 'admin' ? 'គណនីអ្នកប្រើ' : 'គណនីសិស្ស']];
   }
   function renderTabs() {
     $('#tabs').innerHTML = tabsForRole(state.me.role).map(([id, icon, label]) =>
@@ -253,6 +256,7 @@
     document.querySelectorAll('#tabs .tab-link').forEach(a => a.classList.toggle('active', a.dataset.tab === tab));
     if (tab === 'lessons') renderLessonsView();
     else if (tab === 'records') renderRecordsView();
+    else if (tab === 'worksheets') window.Worksheets.renderView();
     else if (tab === 'accounts') renderAccountsView();
     window.scrollTo(0, 0);
   }
@@ -428,6 +432,8 @@
             }).join('')}</div>
           </div>` : ''}
 
+        <div id="lessonWorksheets"></div>
+
         ${!ytId && !l.description && !files.length ? emptyBox('fa-hourglass-half', 'មេរៀននេះមិនទាន់មានខ្លឹមសារ') : ''}
 
         ${isStudent ? `<div class="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl bg-emerald-50 border border-emerald-200">
@@ -444,6 +450,7 @@
       box.innerHTML = `<iframe src="${esc(d.preview)}" class="w-full h-[70vh] rounded-lg border border-slate-200" allow="autoplay" loading="lazy"></iframe>`;
     }));
     if (isStudent) startTracking(l.id);
+    window.Worksheets.injectLessonSection(l.id, $('#lessonWorksheets'));
   }
 
   // ពេលសិស្សបើកមេរៀន ប្រព័ន្ធកត់ត្រា៖ ការបើក, រយៈពេលរៀន (រាប់តែពេលកំពុងមើលទំព័រ), និងការរៀនចប់
@@ -601,7 +608,7 @@
     return data || [];
   }
 
-  function studentReportHtml(student, records, lessons) {
+  function studentReportHtml(student, records, lessons, subs) {
     const gradeLessons = lessons.filter(l => l.grade === student.grade);
     const byLesson = Object.fromEntries(records.map(r => [r.lesson_id, r]));
     const done = records.filter(r => r.completed_at).length;
@@ -634,7 +641,8 @@
               <td class="p-3 whitespace-nowrap">${r ? fmtDuration(r.seconds_spent) : '—'}</td>
               <td class="p-3 hidden sm:table-cell">${r ? r.open_count + ' ដង' : '—'}</td>
               <td class="p-3 whitespace-nowrap hidden sm:table-cell text-slate-500">${r ? fmtDateTime(r.last_opened_at) : '—'}</td></tr>`;
-          }).join('')}</tbody></table></div></div>` : emptyBox('fa-book', 'មិនទាន់មានមេរៀនសម្រាប់ថ្នាក់នេះ')}`;
+          }).join('')}</tbody></table></div></div>` : emptyBox('fa-book', 'មិនទាន់មានមេរៀនសម្រាប់ថ្នាក់នេះ')}
+      ${subs ? window.Worksheets.reportHtml(student, subs) : ''}`;
   }
   const statCard = (icon, cls, value, label) => `
     <div class="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-3">
@@ -647,28 +655,31 @@
     const me = state.me;
     try {
       const recsPromise = me.role === 'parent' ? fetchRecordsFor(state.children.map(c => c.id)) : me.role === 'student' ? fetchRecordsFor([me.id]) : null;
+      const kidIds = me.role === 'parent' ? state.children.map(c => c.id) : me.role === 'student' ? [me.id] : null;
+      const subsPromise = kidIds ? window.Worksheets.fetchSubmissions(kidIds) : null;
       if (!state.lessons.length) await loadLessons();
       if (me.role === 'student') {
         const recs = await recsPromise;
         v.innerHTML = `<h1 class="text-xl sm:text-2xl font-bold text-blue-950 mb-1">កំណត់ត្រារៀនរបស់ខ្ញុំ</h1>
-          <p class="text-sm text-slate-500 mb-5">${esc(me.full_name)} • ${esc(me.grade || '')}</p>` + studentReportHtml(me, recs, state.lessons);
+          <p class="text-sm text-slate-500 mb-5">${esc(me.full_name)} • ${esc(me.grade || '')}</p>` + studentReportHtml(me, recs, state.lessons, await subsPromise);
         return;
       }
       if (me.role === 'parent') {
         if (!state.children.length) { v.innerHTML = emptyBox('fa-child', 'មិនទាន់បានភ្ជាប់គណនីកូន', 'សូមទាក់ទងគ្រូ ឬ Admin ដើម្បីភ្ជាប់គណនីកូនរបស់អ្នក'); return; }
         const recs = await recsPromise;
+        const subs = await subsPromise;
         v.innerHTML = `<h1 class="text-xl sm:text-2xl font-bold text-blue-950 mb-5">ការរៀនរបស់កូន</h1>` +
           state.children.map(c => `<section class="mb-8">
             <div class="flex items-center gap-3 mb-3"><span class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center"><i class="fa-solid fa-user-graduate"></i></span>
               <div><p class="font-bold text-slate-900">${esc(c.full_name)}</p><p class="text-xs text-slate-500">${esc(c.grade || '')}</p></div></div>
-            ${studentReportHtml(c, recs.filter(r => r.student_id === c.id), state.lessons)}</section>`).join('');
+            ${studentReportHtml(c, recs.filter(r => r.student_id === c.id), state.lessons, subs.filter(x => x.student_id === c.id))}</section>`).join('');
         return;
       }
       // staff: summary per student
       const { data: students, error } = await sb.from('profiles').select('*').eq('role', 'student').order('full_name');
       if (error) throw error;
       // (lessons were loaded above)
-      const recs = await fetchRecordsFor((students || []).map(s => s.id));
+      const [recs, allSubs] = await Promise.all([fetchRecordsFor((students || []).map(s => s.id)), window.Worksheets.fetchSubmissions((students || []).map(s => s.id))]);
       const gradeSel = state.recGrade || '';
       v.innerHTML = `
         <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-5">
@@ -688,19 +699,23 @@
           const rs = recs.filter(r => r.student_id === s.id);
           const gl = state.lessons.filter(l => l.grade === s.grade);
           const doneIn = gl.filter(l => rs.some(r => r.lesson_id === l.id && r.completed_at)).length;
-          return { s, rs, gl, doneIn, sec: rs.reduce((a, r) => a + r.seconds_spent, 0), last: rs[0] ? rs[0].last_opened_at : null };
+          const best = window.Worksheets.bestBySheet(allSubs.filter(x => x.student_id === s.id));
+          const wsAvg = best.length ? Math.round(best.reduce((a, b) => a + (b.total ? b.score / b.total : 0), 0) / best.length * 100) : null;
+          return { s, rs, gl, doneIn, wsAvg, wsCount: best.length, sec: rs.reduce((a, r) => a + r.seconds_spent, 0), last: rs[0] ? rs[0].last_opened_at : null };
         });
         state._recRows = rows;
         $('#recTable').innerHTML = `<div class="bg-white rounded-2xl border border-slate-200 overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-sm">
           <thead class="bg-slate-50 text-xs text-slate-500 text-left"><tr><th class="p-3">សិស្ស</th><th class="p-3">ថ្នាក់</th><th class="p-3 whitespace-nowrap">រៀនរួច</th>
+            <th class="p-3 whitespace-nowrap">កិច្ចការ</th>
             <th class="p-3 whitespace-nowrap hidden sm:table-cell">រយៈពេល</th><th class="p-3 whitespace-nowrap hidden md:table-cell">ចុងក្រោយ</th><th class="p-3"></th></tr></thead>
-          <tbody class="divide-y divide-slate-100">${rows.map(({ s, gl, doneIn, sec, last }) => {
+          <tbody class="divide-y divide-slate-100">${rows.map(({ s, gl, doneIn, sec, last, wsAvg, wsCount }) => {
             const pct = gl.length ? Math.round(doneIn / gl.length * 100) : 0;
             return `<tr class="hover:bg-slate-50 cursor-pointer" data-student="${s.id}">
               <td class="p-3 font-semibold text-slate-800">${esc(s.full_name)}<span class="block text-xs font-normal text-slate-400">@${esc(s.username)}</span></td>
               <td class="p-3 whitespace-nowrap">${esc(s.grade || '—')}</td>
               <td class="p-3 min-w-[120px]"><div class="flex items-center gap-2"><div class="flex-1 h-2 rounded-full bg-slate-100"><div class="h-2 rounded-full bg-emerald-500" style="width:${pct}%"></div></div>
                 <span class="text-xs text-slate-600 whitespace-nowrap">${doneIn}/${gl.length}</span></div></td>
+              <td class="p-3 whitespace-nowrap">${wsAvg === null ? '<span class="text-slate-400">—</span>' : `<span class="font-semibold ${wsAvg >= 50 ? 'text-emerald-700' : 'text-red-600'}">${wsAvg}%</span> <span class="text-xs text-slate-400">(${wsCount})</span>`}</td>
               <td class="p-3 whitespace-nowrap hidden sm:table-cell">${fmtDuration(sec)}</td>
               <td class="p-3 whitespace-nowrap hidden md:table-cell text-slate-500">${last ? fmtDateTime(last) : 'មិនទាន់ចូល'}</td>
               <td class="p-3 text-right"><i class="fa-solid fa-chevron-right text-slate-300"></i></td></tr>`;
@@ -712,7 +727,7 @@
         const tr = e.target.closest('[data-student]'); if (!tr) return;
         const s = students.find(x => x.id === tr.dataset.student);
         openModal(modalHeader('កំណត់ត្រារៀន — ' + esc(s.full_name), 'fa-chart-simple') +
-          `<div class="p-4 sm:p-6 bg-slate-50">${studentReportHtml(s, recs.filter(r => r.student_id === s.id), state.lessons)}</div>`, { wide: true });
+          `<div class="p-4 sm:p-6 bg-slate-50">${studentReportHtml(s, recs.filter(r => r.student_id === s.id), state.lessons, allSubs.filter(x => x.student_id === s.id))}</div>`, { wide: true });
       });
       $('#csvBtn').addEventListener('click', () => exportCsv(state._recRows || []));
     } catch (e) {
@@ -721,8 +736,8 @@
   }
 
   function exportCsv(rows) {
-    const lines = [['ឈ្មោះសិស្ស', 'Username', 'ថ្នាក់', 'មេរៀនរៀនរួច', 'មេរៀនសរុបក្នុងថ្នាក់', 'រយៈពេលរៀន (នាទី)', 'ចូលរៀនចុងក្រោយ']];
-    rows.forEach(({ s, gl, doneIn, sec, last }) => lines.push([s.full_name, s.username, s.grade || '', doneIn, gl.length, Math.round(sec / 60), last ? new Date(last).toLocaleString() : '']));
+    const lines = [['ឈ្មោះសិស្ស', 'Username', 'ថ្នាក់', 'មេរៀនរៀនរួច', 'មេរៀនសរុបក្នុងថ្នាក់', 'កិច្ចការបានធ្វើ', 'ពិន្ទុកិច្ចការមធ្យម (%)', 'រយៈពេលរៀន (នាទី)', 'ចូលរៀនចុងក្រោយ']];
+    rows.forEach(({ s, gl, doneIn, sec, last, wsAvg, wsCount }) => lines.push([s.full_name, s.username, s.grade || '', doneIn, gl.length, wsCount, wsAvg === null ? '' : wsAvg, Math.round(sec / 60), last ? new Date(last).toLocaleString() : '']));
     const csv = '﻿' + lines.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\r\n');
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
@@ -921,6 +936,10 @@
 
   // session expiry / sign-out in another tab
   sb.auth.onAuthStateChange((event) => { if (event === 'SIGNED_OUT' && state.me) { state.me = null; showLogin(); } });
+
+  // shared helpers for js/worksheets.js
+  window.App = { sb, CFG, state, $, esc, toast, errMsg, openModal, closeModal, modalHeader, gradeOptions, subjectOf, SUBJECT_COLORS,
+    isStaff, loading, emptyBox, statCard, fmtDate, fmtDateTime, fmtDuration, loadLessons, linkify };
 
   boot().catch((e) => { console.error(e); showLogin(); });
 })();
