@@ -120,7 +120,7 @@
       const s = app.subjectOf(w.subject);
       const b = best[w.id];
       const nQ = (w.fields || []).filter(isQ).length;
-      const canEdit = me.role === 'admin' || w.created_by === me.id;
+      const canEdit = w.created_by === me.id || app.canManageGrade(w.grade);
       return `<article class="lesson-card" data-play="${w.id}" tabindex="0" role="button" aria-label="${esc(w.title)}">
         <div class="relative aspect-[4/3] bg-slate-100 overflow-hidden border-b border-slate-100">
           ${w.pages && w.pages[0] ? `<img src="${esc(w.pages[0].url)}" alt="" loading="lazy" class="w-full h-full object-cover object-top">` : `<span class="absolute inset-0 flex items-center justify-center text-slate-300 text-4xl"><i class="fa-solid fa-file-pen"></i></span>`}
@@ -594,7 +594,7 @@
           <form id="bMeta" class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label class="block sm:col-span-2"><span class="label">ចំណងជើង *</span><input name="title" required maxlength="200" class="field mt-1" value="${esc(s.title)}" placeholder="ឧ. កិច្ចការផ្ទះ — បំពេញពាក្យ"></label>
             <label class="block"><span class="label">មុខវិជ្ជា</span><select name="subject" class="field mt-1">${app.CFG.SUBJECTS.map(x => `<option value="${x.id}" ${x.id === s.subject ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>
-            <label class="block"><span class="label">ថ្នាក់ *</span><select name="grade" class="field mt-1"><option value="">— ជ្រើសថ្នាក់ —</option>${app.gradeOptions(s.grade || app.state.filter.grade)}</select></label>
+            <label class="block"><span class="label">ថ្នាក់ *</span><select name="grade" class="field mt-1"><option value="">— ជ្រើសថ្នាក់ —</option>${app.gradeOptions(s.grade || app.state.filter.grade, { only: app.myGrades() })}</select></label>
             <label class="block sm:col-span-2"><span class="label">ភ្ជាប់ទៅមេរៀន (ស្រេចចិត្ត)</span><select name="lesson_id" class="field mt-1"><option value="">— មិនភ្ជាប់ —</option>${app.state.lessons.map(l => `<option value="${l.id}" ${l.id === s.lesson_id ? 'selected' : ''}>${esc(l.grade)} • ${esc(l.title)}</option>`).join('')}</select></label>
             <label class="block sm:col-span-2"><span class="label">ការណែនាំសម្រាប់សិស្ស</span><textarea name="instructions" rows="2" class="field mt-1" placeholder="ឧ. អូសពាក្យក្នុងប្រអប់ទៅបំពេញចន្លោះ">${esc(s.instructions || '')}</textarea></label>
             <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="allow_retry" ${s.allow_retry ? 'checked' : ''} class="w-4 h-4 accent-blue-900"> អនុញ្ញាតឱ្យធ្វើម្តងទៀត</label>
