@@ -506,14 +506,14 @@
     const files = l.attachments || [];
 
     openModal(modalHeader(esc(l.title)) + `
-      <div class="p-4 sm:p-6 space-y-5">
+      <div class="p-3 sm:p-6 space-y-5 max-w-6xl mx-auto">
         <div class="flex items-center gap-1.5 flex-wrap text-xs">
           <span class="badge ${SUBJECT_COLORS[s.color]}"><i class="fa-solid ${s.icon}"></i> ${esc(s.name)}</span>
           <span class="badge bg-slate-100 text-slate-600">${esc(l.grade)}</span>
           <span class="text-slate-500 ml-1"><i class="fa-solid fa-user-pen"></i> ${esc(l.teacher_name || '—')} • ${fmtDate(l.created_at)}</span>
         </div>
 
-        ${ytId ? `<div class="aspect-video rounded-xl overflow-hidden bg-black shadow">
+        ${ytId ? `<div class="aspect-video rounded-xl overflow-hidden bg-black shadow mx-auto" style="width:min(100%, calc((100dvh - 150px) * 16 / 9))">
             <iframe class="w-full h-full" src="https://www.youtube-nocookie.com/embed/${ytId}?rel=0" title="${esc(l.title)}"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>
           </div>` : ''}
@@ -550,7 +550,7 @@
               ${rec && rec.completed_at ? '<i class="fa-solid fa-circle-check"></i> បានរៀនរួចហើយ' : '<i class="fa-solid fa-check"></i> ខ្ញុំរៀនរួចហើយ'}
             </button>
           </div>` : ''}
-      </div>`, { wide: true, onClose: isStudent ? () => stopTracking() : null });
+      </div>`, { full: true, onClose: isStudent ? () => stopTracking() : null });
 
     $('#modalBox').querySelectorAll('[data-preview]').forEach(b => b.addEventListener('click', () => {
       const i = +b.dataset.preview, box = $('#pv' + i), d = driveLinks(files[i].url);
