@@ -806,7 +806,7 @@
         <div class="bg-white rounded-xl border border-slate-200 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
           <label class="btn-red cursor-pointer self-start"><i class="fa-solid fa-upload"></i> Upload រូប ឬ PDF
             <input id="bUpload" type="file" accept="image/png,image/jpeg,image/webp,application/pdf" multiple class="hidden"></label>
-          <p id="bUpMsg" class="text-xs text-slate-500">រូប JPG/PNG ឬ PDF (មួយទំព័រ = មួយរូប)។ បន្ទាប់មក ជ្រើសប្រភេទប្រអប់ខាងលើ ហើយ <b>អូសលើរូប</b> ដើម្បីគូស។</p>
+          <p id="bUpMsg" class="text-xs text-slate-500">រូប JPG/PNG ឬ PDF (មួយទំព័រ = មួយរូប)។ ប្រព័ន្ធដាក់ Watermark ឈ្មោះសាលាឱ្យដោយស្វ័យប្រវត្តិ (ជ្រើសមុខវិជ្ជាមុន Upload)។ បន្ទាប់មក ជ្រើសប្រភេទប្រអប់ខាងលើ ហើយ <b>អូសលើរូប</b> ដើម្បីគូស។</p>
         </div>
         <div id="bPages"></div>
       </div>`, {
@@ -1101,7 +1101,7 @@
               const c = document.createElement('canvas'); c.width = Math.round(vp.width); c.height = Math.round(vp.height);
               const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
               await page.render({ canvasContext: ctx, viewport: vp }).promise;
-              b.pages.push(await uploadCanvas(c)); b.dirty = true; drawPages();
+              b.pages.push(await uploadCanvas(c, meta.elements.subject && meta.elements.subject.value)); b.dirty = true; drawPages();
             }
           } else if (/^image\//.test(file.type)) {
             msg.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> កំពុង Upload ${esc(file.name)}...`;
@@ -1110,7 +1110,7 @@
             const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * scale); c.height = Math.round(img.naturalHeight * scale);
             const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
             URL.revokeObjectURL(img.src);
-            b.pages.push(await uploadCanvas(c)); b.dirty = true; drawPages();
+            b.pages.push(await uploadCanvas(c, meta.elements.subject && meta.elements.subject.value)); b.dirty = true; drawPages();
           } else app.toast('ប្រភេទឯកសារមិនគាំទ្រ៖ ' + file.name, 'error');
         }
         msg.innerHTML = '<span class="text-emerald-700"><i class="fa-solid fa-check"></i> Upload រួចរាល់។ ជ្រើសប្រភេទប្រអប់ខាងលើ ហើយអូសលើរូបដើម្បីគូស។</span>';
@@ -1218,8 +1218,26 @@
   function loadImage(src) {
     return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('មិនអាចបើករូបភាពបាន')); i.src = src; });
   }
-  async function uploadCanvas(canvas) {
+  // faint diagonal school name, baked into every page a teacher uploads
+  async function watermark(canvas, subject) {
+    const en = subject === 'english';
+    const text = en ? 'Hampton International School' : 'សាលាអន្តរជាតិ ហេមតុន';
+    const fam = en ? '"Plus Jakarta Sans", "Kantumruy Pro", sans-serif' : '"Kantumruy Pro", sans-serif';
+    const k = canvas.width / 1200, size = Math.round(44 * k);
+    try { await document.fonts.load(`700 ${size}px ${en ? '"Plus Jakarta Sans"' : '"Kantumruy Pro"'}`, text); } catch (e) { /* use fallback font */ }
+    const ctx = canvas.getContext('2d');
+    ctx.save();
+    ctx.font = `700 ${size}px ${fam}`; ctx.fillStyle = '#0d2b6b'; ctx.globalAlpha = 0.065; ctx.textBaseline = 'middle';
+    const tw = ctx.measureText(text).width, stepX = tw + 120 * k, stepY = size + 150 * k;
+    const d = Math.hypot(canvas.width, canvas.height);
+    ctx.translate(canvas.width / 2, canvas.height / 2); ctx.rotate(-Math.PI / 6);
+    for (let y = -d / 2, row = 0; y < d / 2; y += stepY, row++)
+      for (let x = -d / 2 - (row % 2) * stepX / 2; x < d / 2; x += stepX) ctx.fillText(text, x, y);
+    ctx.restore();
+  }
+  async function uploadCanvas(canvas, subject) {
     const app = A();
+    await watermark(canvas, subject);
     const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.86));
     const path = `${app.state.me.id}/${Date.now()}-${uid()}.jpg`;
     const { error } = await app.sb.storage.from('worksheets').upload(path, blob, { contentType: 'image/jpeg', cacheControl: '31536000' });
