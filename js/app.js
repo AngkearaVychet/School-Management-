@@ -166,7 +166,9 @@
   function openModal(html, { wide = false, full = false, onClose = null, beforeClose = null } = {}) {
     beforeModalClose = beforeClose;
     const box = $('#modalBox');
-    box.className = 'relative bg-white w-full sm:rounded-2xl shadow-2xl max-h-screen sm:max-h-[94vh] overflow-y-auto ' + (full ? 'sm:max-w-6xl' : wide ? 'sm:max-w-4xl' : 'sm:max-w-lg');
+    // full = worksheet player / builder: fill the whole screen (edge to edge, all devices)
+    box.className = full ? 'fixed inset-0 bg-white w-full h-[100dvh] overflow-y-auto overscroll-contain'
+      : 'relative bg-white w-full sm:rounded-2xl shadow-2xl max-h-screen sm:max-h-[94vh] overflow-y-auto ' + (wide ? 'sm:max-w-4xl' : 'sm:max-w-lg');
     box.innerHTML = html;
     $('#modal').classList.remove('hidden');
     document.body.style.overflow = 'hidden';

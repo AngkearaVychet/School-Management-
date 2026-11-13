@@ -155,9 +155,17 @@
     if (subject === 'chinese') return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
     return kmDate(d);
   }
+  // shrink a name/date so the whole text fits inside its box
+  function fitAuto(el) {
+    const s = el.firstElementChild; if (!s || !el.clientWidth) return;
+    el.style.setProperty('--fit', 1);
+    const room = el.clientWidth - 6, need = s.scrollWidth;
+    if (need > room) el.style.setProperty('--fit', Math.max(0.45, room / need).toFixed(3));
+  }
   function fillAuto(root, name, date, subject) {
-    root.querySelectorAll('.ws-auto[data-auto=name]').forEach(el => { el.textContent = name || ''; });
-    root.querySelectorAll('.ws-auto[data-auto=date]').forEach(el => { el.textContent = sheetDate(date, subject); });
+    const put = (el, txt) => { el.innerHTML = txt ? `<span>${esc(txt)}</span>` : ''; fitAuto(el); };
+    root.querySelectorAll('.ws-auto[data-auto=name]').forEach(el => put(el, name || ''));
+    root.querySelectorAll('.ws-auto[data-auto=date]').forEach(el => put(el, sheetDate(date, subject)));
   }
   const uid = () => Math.random().toString(36).slice(2, 9);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -336,14 +344,14 @@
   const pageObservers = new WeakMap();
   function watchPageWidth(el) {
     if (pageObservers.has(el)) return;
-    const ro = new ResizeObserver(() => el.style.setProperty('--pw', el.clientWidth + 'px'));
+    const ro = new ResizeObserver(() => { el.style.setProperty('--pw', el.clientWidth + 'px'); el.querySelectorAll('.ws-auto').forEach(fitAuto); });
     ro.observe(el); pageObservers.set(el, ro);
     el.style.setProperty('--pw', el.clientWidth + 'px');
   }
   function boxStyle(f, page) {
     const ratio = page.h / page.w; // height in units of page width
     const fs = clamp(f.h * ratio * 0.62, 0.008, 0.06);
-    return `left:${f.x * 100}%;top:${f.y * 100}%;width:${f.w * 100}%;height:${f.h * 100}%;font-size:calc(var(--pw) * ${fs.toFixed(4)});`;
+    return `left:${f.x * 100}%;top:${f.y * 100}%;width:${f.w * 100}%;height:${f.h * 100}%;font-size:calc(var(--pw) * ${fs.toFixed(4)} * var(--fit, 1));`;
   }
   // background crop that shows exactly the part of the page under a drag item
   function cropStyle(f, page) {
@@ -361,7 +369,7 @@
     const state = { answers: {}, placed: {}, seconds: 0, done: false, timer: null, selectedDrag: null };
 
     const pagesHtml = (w.pages || []).map((p, pi) => `
-      <div class="ws-page relative mx-auto mb-4 shadow-md rounded-lg overflow-hidden bg-white select-none" data-page="${pi}" style="max-width:${Math.min(p.w, 1100)}px">
+      <div class="ws-page relative mx-auto mb-4 shadow-md rounded-lg overflow-hidden bg-white select-none" data-page="${pi}" style="max-width:${Math.min(p.w, 1200)}px">
         <img src="${esc(p.url)}" alt="ទំព័រ ${pi + 1}" class="block w-full pointer-events-none" draggable="false">
         ${fields.some(f => f.page === pi && f.type === 'mleft') ? `<svg class="ws-lines" data-page="${pi}" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>` : ''}
         ${fields.filter(f => f.page === pi).map(f => playerFieldHtml(f, p)).join('')}
@@ -381,7 +389,7 @@
         </div>
         <div id="wsResultBar" class="hidden"></div>
       </div>
-      <div class="p-3 sm:p-5 bg-slate-100">
+      <div class="p-2 sm:p-5 bg-slate-100 min-h-[calc(100dvh-64px)]">
         ${w.instructions ? `<div class="max-w-3xl mx-auto mb-4 text-sm text-slate-700 bg-white rounded-xl p-3 border border-slate-200"><i class="fa-solid fa-circle-info text-blue-700 mr-1"></i>${app.linkify(w.instructions)}</div>` : ''}
         <div id="wsPages">${pagesHtml || app.emptyBox('fa-image', 'កិច្ចការនេះមិនទាន់មានទំព័រ')}</div>
         ${mode !== 'view' && fields.some(f => f.type === 'drag') ? `<p class="text-center text-xs text-slate-500 mt-1"><i class="fa-solid fa-hand-pointer"></i> អូសពាក្យទៅដាក់ក្នុងចន្លោះ (ឬចុចពាក្យ រួចចុចចន្លោះ)</p>` : ''}
