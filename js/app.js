@@ -319,20 +319,23 @@
   //  LESSONS
   // =========================================================
   async function loadLessons() {
-    const { data, error } = await sb.from('lessons').select('*').order('created_at', { ascending: false });
+    const vg = viewGrades();
+    let q = sb.from('lessons').select('*').order('created_at', { ascending: false });
+    if (vg) q = q.in('grade', vg.length ? vg : ['-']);          // only the grades this person may see
+    const recQ = state.me.role === 'student' ? sb.from('lesson_records').select('*').eq('student_id', state.me.id) : null;
+    const [{ data, error }, recs] = await Promise.all([q, recQ]);  // both requests at the same time
     if (error) throw error;
     state.lessons = data || [];
-    const vg = viewGrades();
-    if (vg) state.lessons = state.lessons.filter(l => vg.includes(l.grade));
-    if (state.me.role === 'student') {
-      const { data: recs } = await sb.from('lesson_records').select('*').eq('student_id', state.me.id);
-      state.myRecords = Object.fromEntries((recs || []).map(r => [r.lesson_id, r]));
-    }
+    if (recQ) state.myRecords = Object.fromEntries(((recs && recs.data) || []).map(r => [r.lesson_id, r]));
   }
 
   async function renderLessonsView() {
     const v = $('#view');
     v.innerHTML = loading();
+    // worksheet counts are fetched in parallel with the lessons
+    const vg0 = viewGrades();
+    let wq = sb.from('worksheets').select('id,lesson_id,grade'); if (vg0) wq = wq.in('grade', vg0.length ? vg0 : ['-']);
+    const wsCountP = wq.then(r => r, () => ({ data: [] }));
     try { await loadLessons(); } catch (e) { v.innerHTML = emptyBox('fa-wifi', 'មិនអាចទាញយកមេរៀនបាន', esc(errMsg(e))); return; }
     const me = state.me;
     if (me.role === 'parent' && !state.filter.grade && state.children[0]) state.filter.grade = state.children[0].grade || '';
@@ -370,9 +373,8 @@
     drawSubjectChips();
     drawLessonGrid();
     // worksheet counts (for the banner and the cards) — loaded after first paint
-    sb.from('worksheets').select('id,lesson_id,grade').then(({ data }) => {
-      const vg = viewGrades();
-      state.wsList = (data || []).filter(w => !vg || vg.includes(w.grade));
+    wsCountP.then(({ data }) => {
+      state.wsList = data || [];
       state.wsByLesson = {};
       for (const w of state.wsList) if (w.lesson_id) state.wsByLesson[w.lesson_id] = (state.wsByLesson[w.lesson_id] || 0) + 1;
       if ($('#lessonGrid')) { drawHeroStats(); drawLessonGrid(); }

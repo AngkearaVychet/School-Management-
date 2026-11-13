@@ -68,7 +68,9 @@
     const fields = w.fields || [], out = {};
     for (const f of fields) {
       if (f.type !== 'mleft' || !answers || !answers[f.id]) continue;
-      const r = fields.find(x => x.type === 'mright' && x.page === f.page && x.label === answers[f.id]);
+      // if a label were ever repeated on a page, use the dot nearest to this question (same exercise)
+      const cs = fields.filter(x => x.type === 'mright' && x.page === f.page && x.label === answers[f.id]);
+      const fy = f.y + f.h / 2, r = cs.sort((a, b) => Math.abs(a.y + a.h / 2 - fy) - Math.abs(b.y + b.h / 2 - fy))[0];
       if (r) out[f.id] = r.id;
     }
     return out;
@@ -166,16 +168,19 @@
   // ---------------------------------------------------------
   //  Data
   // ---------------------------------------------------------
-  async function loadSheets() {
-    const { data, error } = await A().sb.from('worksheets').select('*').order('created_at', { ascending: false });
-    if (error) throw error;
-    cache.sheets = data || [];
-    { const vg = A().viewGrades(); if (vg) cache.sheets = cache.sheets.filter(w => vg.includes(w.grade)); }
-    return cache.sheets;
+  let sheetsInFlight = null;
+  function loadSheets() {
+    if (sheetsInFlight) return sheetsInFlight;               // share one request between callers
+    const vg = A().viewGrades();
+    let q = A().sb.from('worksheets').select('*').order('created_at', { ascending: false });
+    if (vg) q = q.in('grade', vg.length ? vg : ['-']);       // only the grades this person may see
+    sheetsInFlight = q.then(({ data, error }) => { if (error) throw error; cache.sheets = data || []; return cache.sheets; })
+      .finally(() => { sheetsInFlight = null; });
+    return sheetsInFlight;
   }
   async function fetchSubmissions(studentIds) {
     if (!studentIds || !studentIds.length) return [];
-    const sheetsReady = cache.sheets.length ? null : loadSheets().catch(() => null); // titles for reports
+    const sheetsReady = cache.sheets.length && !sheetsInFlight ? null : loadSheets().catch(() => null); // titles for reports
     const { data, error } = await A().sb.from('worksheet_submissions').select('*').in('student_id', studentIds).order('submitted_at', { ascending: false });
     if (sheetsReady) await sheetsReady;
     if (error) throw error;
@@ -203,9 +208,10 @@
     v.innerHTML = app.loading();
     let subs = [];
     try {
-      await loadSheets();
+      const sheetsP = loadSheets();
       if (me.role === 'student') subs = await fetchSubmissions([me.id]);
       if (me.role === 'parent') subs = await fetchSubmissions(app.state.children.map(c => c.id));
+      await sheetsP;
     } catch (e) { v.innerHTML = app.emptyBox('fa-wifi', 'មិនអាចទាញយកកិច្ចការបាន', esc(app.errMsg(e))); return; }
     cache.subs = subs;
     if (me.role === 'student') filter.grade = me.grade || '';
