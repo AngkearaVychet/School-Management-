@@ -520,6 +520,8 @@
 
         ${l.description ? `<div class="text-[15px] leading-relaxed text-slate-700 bg-slate-50 rounded-xl p-4">${linkify(l.description)}</div>` : ''}
 
+        <div id="lessonWorksheets"></div>
+
         ${files.length ? `<div>
             <h4 class="font-bold text-slate-800 mb-2 text-sm"><i class="fa-solid fa-paperclip mr-1"></i> ឯកសារមេរៀន</h4>
             <div class="space-y-2">${files.map((f, i) => {
@@ -540,7 +542,6 @@
             }).join('')}</div>
           </div>` : ''}
 
-        <div id="lessonWorksheets"></div>
 
         ${!ytId && !l.description && !files.length ? emptyBox('fa-hourglass-half', 'មេរៀននេះមិនទាន់មានខ្លឹមសារ') : ''}
 

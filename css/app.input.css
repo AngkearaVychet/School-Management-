@@ -14,6 +14,10 @@
   .btn-green { @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-sm transition disabled:opacity-60; }
   .btn-ghost { @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold transition; }
   .btn-ghost-sm { @apply inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition; }
+  .ws-cta-wrap { @apply rounded-2xl p-3 sm:p-4 border border-emerald-200; background: linear-gradient(135deg, #ecfdf5 0%, #f0fdfa 60%, #fffbeb 100%); }
+  .ws-cta { @apply w-full flex items-center gap-3 sm:gap-4 p-2.5 sm:p-3 rounded-xl bg-white border border-emerald-200 shadow-sm hover:shadow-lg hover:border-emerald-400 hover:-translate-y-0.5 transition duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500; }
+  .ws-cta-thumb { @apply flex w-16 h-20 sm:w-24 sm:h-28 flex-shrink-0 rounded-lg overflow-hidden bg-emerald-50 ring-1 ring-emerald-100; }
+  .ws-cta-btn { @apply flex-shrink-0 inline-flex items-center gap-2 px-3.5 sm:px-5 py-3 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 text-white font-bold text-sm shadow-md shadow-emerald-600/30 group-hover:scale-105 transition; }
   .icon-btn { @apply w-9 h-9 rounded-lg hover:bg-slate-100 text-slate-500 inline-flex items-center justify-center transition; }
   .badge { @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold whitespace-nowrap; }
   .chip { @apply inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-slate-200 bg-white text-sm text-slate-600 whitespace-nowrap hover:border-slate-300 transition; }

@@ -694,11 +694,36 @@
   async function injectLessonSection(lessonId, el) {
     if (!el) return;
     const app = A();
-    const { data } = await app.sb.from('worksheets').select('id,title,fields').eq('lesson_id', lessonId).order('created_at');
+    const me = app.state.me;
+    const subQ = me.role === 'student' ? app.sb.from('worksheet_submissions').select('worksheet_id,score,total,submitted_at').eq('student_id', me.id).order('submitted_at', { ascending: false }) : null;
+    const [{ data }, subR] = await Promise.all([app.sb.from('worksheets').select('id,title,grade,fields,pages,allow_retry').eq('lesson_id', lessonId).order('created_at'), subQ]);
     if (!data || !data.length || !document.body.contains(el)) return;
     data.forEach(d => { if (!cache.sheets.find(x => x.id === d.id)) cache.sheets.push(d); });
-    el.innerHTML = `<h4 class="font-bold text-slate-800 mb-2 text-sm"><i class="fa-solid fa-pen-to-square mr-1"></i> កិច្ចការសម្រាប់មេរៀននេះ</h4>
-      <div class="flex flex-wrap gap-2">${data.map(d => `<button type="button" data-ws-open="${d.id}" class="btn-ghost text-blue-900"><i class="fa-solid fa-file-pen"></i> ${esc(d.title)}</button>`).join('')}</div>`;
+    const best = {};
+    for (const s of (subR && subR.data) || []) if (!best[s.worksheet_id] || s.score / (s.total || 1) > best[s.worksheet_id].score / (best[s.worksheet_id].total || 1)) best[s.worksheet_id] = s;
+    const card = (d) => {
+      const n = qCount(d.fields || []), b = best[d.id], pct = b ? Math.round(100 * b.score / (b.total || 1)) : null;
+      const status = me.role !== 'student' ? '' : b
+        ? `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${pct >= 80 ? 'bg-emerald-100 text-emerald-800' : pct >= 50 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-700'}"><i class="fa-solid fa-star"></i> ${b.score}/${b.total} (${pct}%)</span>`
+        : '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-white/90 text-orange-700 ring-1 ring-orange-200"><i class="fa-solid fa-circle-exclamation"></i> មិនទាន់ធ្វើ</span>';
+      const label = me.role === 'student' ? (b ? (d.allow_retry ? 'ធ្វើម្តងទៀត' : 'មើលលទ្ធផល') : 'ចាប់ផ្តើមធ្វើ') : 'បើកកិច្ចការ';
+      const icon = me.role === 'student' && b ? (d.allow_retry ? 'fa-rotate-right' : 'fa-eye') : 'fa-play';
+      const thumb = d.pages && d.pages[0] ? `<img src="${esc(d.pages[0].url)}" alt="" loading="lazy" class="w-full h-full object-cover object-top">` : '<i class="fa-solid fa-file-pen text-3xl text-emerald-300 m-auto"></i>';
+      return `<button type="button" data-ws-open="${d.id}" class="ws-cta group">
+        <span class="ws-cta-thumb">${thumb}</span>
+        <span class="flex-1 min-w-0 text-left flex flex-col gap-1.5">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-700"><i class="fa-solid fa-pen-to-square"></i> កិច្ចការអនឡាញ • ដាក់ពិន្ទុភ្លាមៗ</span>
+          <span class="font-bold text-slate-900 text-base sm:text-lg leading-snug line-clamp-2">${esc(d.title)}</span>
+          <span class="flex items-center gap-2 flex-wrap text-xs text-slate-600"><span><i class="fa-solid fa-list-check"></i> ${n} សំណួរ</span>${status}</span>
+        </span>
+        <span class="ws-cta-btn"><i class="fa-solid ${icon}"></i><span class="hidden sm:inline"> ${label}</span></span>
+      </button>`;
+    };
+    el.innerHTML = `<div class="ws-cta-wrap">
+      <div class="flex items-center gap-2 mb-3"><span class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center"><i class="fa-solid fa-pen-to-square"></i></span>
+        <h4 class="font-bold text-slate-900">កិច្ចការសម្រាប់មេរៀននេះ</h4>
+        ${me.role === 'student' ? `<span class="ml-auto text-xs text-emerald-800 font-semibold">${Object.keys(best).filter(k => data.some(d => d.id === k)).length}/${data.length} បានធ្វើ</span>` : ''}</div>
+      <div class="space-y-3">${data.map(card).join('')}</div></div>`;
     el.addEventListener('click', async (e) => {
       const b = e.target.closest('[data-ws-open]'); if (!b) return;
       await loadSheets();
