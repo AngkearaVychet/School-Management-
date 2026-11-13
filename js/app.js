@@ -34,8 +34,8 @@
   const toArabic = (t) => String(t).replace(/[០-៩]/g, d => KD.indexOf(d));
   // «មេរៀនទី១០ ៖ សត្វ…» → { no: 10, label: 'មេរៀនទី១០', rest: 'សត្វ…' }
   function splitTitle(t) {
-    const m = /^\s*(មេរៀនទី\s*([០-៩0-9]+))\s*[៖:]\s*(.+)$/.exec(t || '');
-    return m ? { no: +toArabic(m[2]), label: m[1], rest: m[3] } : { no: null, label: '', rest: t || '' };
+    const m = /^\s*((?:ជំពូក\s*([០-៩0-9]+)\s*[•·]\s*)?មេរៀនទី\s*([០-៩0-9]+)(?:\s*[–-]\s*[០-៩0-9]+)?)\s*[៖:]\s*(.+)$/.exec(t || '');
+    return m ? { no: (m[2] ? +toArabic(m[2]) * 100 : 0) + +toArabic(m[3]), label: m[1], rest: m[4] } : { no: null, label: '', rest: t || '' };
   }
   const KM_MONTHS = ['មករា', 'កុម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា', 'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'];
   const KM_DAYS = ['អាទិត្យ', 'ច័ន្ទ', 'អង្គារ', 'ពុធ', 'ព្រហស្បតិ៍', 'សុក្រ', 'សៅរ៍'];
