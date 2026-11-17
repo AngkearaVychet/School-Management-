@@ -408,7 +408,7 @@
       (!subject || l.subject === subject) &&
       (!qq || (l.title + ' ' + l.description + ' ' + l.teacher_name).toLowerCase().includes(qq)))
       .sort((a, b) => (order[a.subject] ?? 99) - (order[b.subject] ?? 99) || gi(a.grade) - gi(b.grade) ||
-        (splitTitle(a.title).no ?? 1e9) - (splitTitle(b.title).no ?? 1e9) || String(b.created_at).localeCompare(String(a.created_at)));
+        (splitTitle(a.title).no ?? 1e9) - (splitTitle(b.title).no ?? 1e9) || (splitTitle(a.title).no != null ? String(a.title).localeCompare(String(b.title)) : 0) || String(b.created_at).localeCompare(String(a.created_at)));
   }
   function drawHeroStats() {
     const box = $('#heroStats'); if (!box) return;
