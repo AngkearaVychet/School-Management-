@@ -26,6 +26,7 @@ window.APP_CONFIG = {
     { id: 'khmer',   name: 'ភាសាខ្មែរ',     icon: 'fa-book-open',    color: 'blue' },
     { id: 'math',    name: 'គណិតវិទ្យា',    icon: 'fa-calculator',   color: 'indigo' },
     { id: 'science', name: 'វិទ្យាសាស្ត្រ',  icon: 'fa-flask',        color: 'emerald' },
+    { id: 'social',  name: 'សិក្សាសង្គម',   icon: 'fa-users',        color: 'teal' },
     { id: 'english', name: 'English',       icon: 'fa-earth-asia',   color: 'rose' },
     { id: 'chinese', name: 'ភាសាចិន 中文',  icon: 'fa-language',     color: 'amber' },
     { id: 'art',     name: 'សិល្បៈ & តន្ត្រី', icon: 'fa-palette',   color: 'purple' },

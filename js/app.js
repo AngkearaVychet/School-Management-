@@ -21,15 +21,15 @@
   const SUBJECT_COLORS = {
     blue: 'bg-blue-50 text-blue-800', indigo: 'bg-indigo-50 text-indigo-800', emerald: 'bg-emerald-50 text-emerald-800',
     rose: 'bg-rose-50 text-rose-800', amber: 'bg-amber-50 text-amber-800', purple: 'bg-purple-50 text-purple-800',
-    slate: 'bg-slate-100 text-slate-700'
+    slate: 'bg-slate-100 text-slate-700', teal: 'bg-teal-50 text-teal-800'
   };
   // card header gradients per subject colour
   const SUBJECT_GRAD = {
     blue: 'from-blue-600 via-blue-700 to-blue-900', indigo: 'from-indigo-500 via-indigo-600 to-violet-800', emerald: 'from-emerald-500 via-emerald-600 to-teal-800',
     rose: 'from-rose-500 via-rose-600 to-red-800', amber: 'from-amber-400 via-orange-500 to-orange-700', purple: 'from-purple-500 via-fuchsia-600 to-purple-800',
-    slate: 'from-slate-500 via-slate-600 to-slate-800'
+    slate: 'from-slate-500 via-slate-600 to-slate-800', teal: 'from-teal-500 via-teal-600 to-cyan-800'
   };
-  const SUBJECT_DOT = { blue: 'bg-blue-600', indigo: 'bg-indigo-600', emerald: 'bg-emerald-600', rose: 'bg-rose-600', amber: 'bg-orange-500', purple: 'bg-purple-600', slate: 'bg-slate-500' };
+  const SUBJECT_DOT = { blue: 'bg-blue-600', indigo: 'bg-indigo-600', emerald: 'bg-emerald-600', rose: 'bg-rose-600', amber: 'bg-orange-500', purple: 'bg-purple-600', slate: 'bg-slate-500', teal: 'bg-teal-600' };
   const KD = '០១២៣៤៥៦៧៨៩';
   const toArabic = (t) => String(t).replace(/[០-៩]/g, d => KD.indexOf(d));
   // «មេរៀនទី១០ ៖ សត្វ…» → { no: 10, label: 'មេរៀនទី១០', rest: 'សត្វ…' }
